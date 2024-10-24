@@ -39,7 +39,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             { CredNames.AccessToken, tokenResponse.AccessToken },
             { CredNames.RefreshToken, tokenResponse.RefreshToken },
             { CredNames.ExpiresIn, tokenResponse.ExpiresIn.ToString() },
-            { CredNames.CreatedAt, tokenResponse.CreatedAt.ToString() }
+            { CredNames.CreatedAt, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString() }
         };
     }
 
