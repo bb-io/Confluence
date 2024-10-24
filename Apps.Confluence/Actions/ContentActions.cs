@@ -66,7 +66,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             ContentId = contentId
         });
         
-        var updateRequest = new ApiRequest($"/api/content/{request.ContentId}", Method.Put, Creds)
+        var updateRequest = new ApiRequest($"/api/content/{contentId}", Method.Put, Creds)
             .WithJsonBody(new
             {
                 type = content.Type,

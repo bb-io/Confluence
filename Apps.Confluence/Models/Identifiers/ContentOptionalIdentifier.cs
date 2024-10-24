@@ -7,5 +7,5 @@ namespace Apps.Confluence.Models.Identifiers;
 public class ContentOptionalIdentifier
 {
     [Display("Content ID", Description = "The identifier of the content object."), DataSource(typeof(ContentDataSource))]
-    public string? ContentId { get; set; } = string.Empty;
+    public string? ContentId { get; set; }
 }
