@@ -5,10 +5,15 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Confluence.Invocables;
 
-public class AppInvocable(InvocationContext invocationContext) : BaseInvocable(invocationContext)
+public class AppInvocable : BaseInvocable
 {
     protected AuthenticationCredentialsProvider[] Creds =>
         InvocationContext.AuthenticationCredentialsProviders.ToArray();
 
-    protected AppClient Client { get; } = new();
+    protected ApiClient Client { get; }
+
+    protected AppInvocable(InvocationContext invocationContext) : base(invocationContext)
+    {
+        Client = new ApiClient(Creds);
+    }
 }

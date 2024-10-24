@@ -49,50 +49,50 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         Dictionary<string, string> values,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            await WebhookLogger.LogAsync(new
-            {
-                message = "Requesting token",
-                state,
-                code,
-                values
-            });
-            
-            var restRequest = new RestRequest(TokenUrl, Method.Post)
-                .AddParameter("grant_type", "authorization_code")
-                .AddParameter("client_id", ApplicationConstants.ClientId)
-                .AddParameter("client_secret", ApplicationConstants.ClientSecret)
-                .AddParameter("redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString())
-                .AddParameter("code", code);
+        var restRequest = new RestRequest(TokenUrl, Method.Post)
+            .AddParameter("grant_type", "authorization_code")
+            .AddParameter("client_id", ApplicationConstants.ClientId)
+            .AddParameter("client_secret", ApplicationConstants.ClientSecret)
+            .AddParameter("redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString())
+            .AddParameter("code", code);
 
-            var client = new RestClient();
-            var response = await client.ExecuteAsync(restRequest, cancellationToken);
-            var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!)!;
-            
-            await WebhookLogger.LogAsync(new
-            {
-                message = "Token response",
-                tokenResponse
-            });
-
-            return new Dictionary<string, string>
-            {
-                { CredNames.AccessToken, tokenResponse.AccessToken },
-                { CredNames.RefreshToken, tokenResponse.RefreshToken },
-                { CredNames.ExpiresIn, tokenResponse.ExpiresIn.ToString() },
-                { CredNames.CreatedAt, tokenResponse.CreatedAt.ToString() }
-            };
-        }
-        catch (Exception e)
+        var client = new RestClient();
+        var response = await client.ExecuteAsync(restRequest, cancellationToken);
+        var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!)!;
+        
+        var confluenceId = await GetConfluenceId(tokenResponse);
+        return new Dictionary<string, string>
         {
-            await WebhookLogger.LogAsync(e);
-            throw;
-        }
+            { CredNames.AccessToken, tokenResponse.AccessToken },
+            { CredNames.RefreshToken, tokenResponse.RefreshToken },
+            { CredNames.ExpiresIn, tokenResponse.ExpiresIn.ToString() },
+            { CredNames.CreatedAt, tokenResponse.CreatedAt.ToString() },
+            { CredNames.ConfluenceId, confluenceId }
+        };
     }
 
     public Task RevokeToken(Dictionary<string, string> values)
     {
         throw new NotImplementedException();
+    }
+
+    private async Task<string> GetConfluenceId(OAuth2TokenResponse tokenResponse)
+    {
+        var metadataUrl = "https://api.atlassian.com/oauth/token/accessible-resources";
+        var metadataRequest = new RestRequest(string.Empty)
+            .AddHeader("Authorization", $"Bearer {tokenResponse.AccessToken}");
+        
+        var client = new RestClient(metadataUrl);
+        var response = await client.ExecuteAsync(metadataRequest);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to get Confluence ID. Response: {response.Content}");
+        }
+        
+        var deserializeObject = JsonConvert.DeserializeObject<List<OAuth2MetadataResponse>>(response.Content!)
+            ?? throw new Exception($"Failed to get Confluence ID. Response: {response.Content}");
+        
+        return deserializeObject.First().Id;
     }
 }

@@ -21,13 +21,6 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
             { "response_type", "code" },
         };
         
-        var queryString = QueryHelpers.AddQueryString(oauthUrl, parameters!);
-
-        WebhookLogger.LogAsync(new
-        {
-            queryString
-        }).Wait();
-        
-        return queryString;
+        return QueryHelpers.AddQueryString(oauthUrl, parameters!);
     }
 }

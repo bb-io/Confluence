@@ -13,15 +13,7 @@ public class ConnectionDefinition : IConnectionDefinition
             Name = "OAuth2",
             AuthenticationType = ConnectionAuthenticationType.OAuth2,
             ConnectionUsage = ConnectionUsage.Actions,
-            ConnectionProperties = new List<ConnectionProperty>
-            {
-                new(CredNames.BaseUrl)
-                {
-                    DisplayName = "Base URL",
-                    Description = "The base URL of the Confluence instance. Example: https://organization.atlassian.net",
-                    Sensitive = false
-                } 
-            }
+            ConnectionProperties = new List<ConnectionProperty>()
         }
     };
 
