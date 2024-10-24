@@ -26,4 +26,11 @@ public class ContentActions(InvocationContext invocationContext) : AppInvocable(
         var apiRequest = new ApiRequest($"/api/content/{request.ContentId}", Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
     }
+    
+    [Action("Delete content", Description = "Deletes a piece of content.")]
+    public async Task DeleteContentAsync([ActionParameter] ContentIdentifier request)
+    {
+        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}", Method.Delete, Creds);
+        await Client.ExecuteWithErrorHandling(apiRequest);
+    }
 }

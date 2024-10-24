@@ -62,13 +62,6 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!)!;
         
         var confluenceId = await GetConfluenceId(tokenResponse);
-        
-        await WebhookLogger.LogAsync(new
-        {
-            tokenResponse,
-            confluenceId
-        });
-        
         return new Dictionary<string, string>
         {
             { CredNames.AccessToken, tokenResponse.AccessToken },

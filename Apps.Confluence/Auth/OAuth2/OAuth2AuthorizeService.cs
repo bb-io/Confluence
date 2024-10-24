@@ -15,7 +15,7 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
         {
             { "audience", "api.atlassian.com" },
             { "client_id", ApplicationConstants.ClientId },
-            { "scope", $"{ApplicationConstants.Scope} offline_access" },
+            { "scope", ApplicationConstants.Scope },
             { "redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString() },
             { "state", values["state"] },
             { "response_type", "code" }
