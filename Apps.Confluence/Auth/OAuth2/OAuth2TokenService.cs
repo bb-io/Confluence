@@ -28,6 +28,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             .AddParameter("grant_type", "refresh_token")
             .AddParameter("client_id", ApplicationConstants.ClientId)
             .AddParameter("client_secret", ApplicationConstants.ClientSecret)
+            .AddParameter("redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString())
             .AddParameter("refresh_token", values[CredNames.RefreshToken]);
         
         var client = new RestClient();
@@ -61,6 +62,13 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!)!;
         
         var confluenceId = await GetConfluenceId(tokenResponse);
+        
+        await WebhookLogger.LogAsync(new
+        {
+            tokenResponse,
+            confluenceId
+        });
+        
         return new Dictionary<string, string>
         {
             { CredNames.AccessToken, tokenResponse.AccessToken },

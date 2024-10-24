@@ -15,10 +15,10 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
         {
             { "audience", "api.atlassian.com" },
             { "client_id", ApplicationConstants.ClientId },
-            { "scope", ApplicationConstants.Scope },
+            { "scope", $"{ApplicationConstants.Scope} offline_access" },
             { "redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString() },
             { "state", values["state"] },
-            { "response_type", "code" },
+            { "response_type", "code" }
         };
         
         return QueryHelpers.AddQueryString(oauthUrl, parameters!);
