@@ -1,4 +1,4 @@
-namespace Apps.App.Api;
+namespace Apps.Confluence.Api;
 
 public class AppClient
 {
