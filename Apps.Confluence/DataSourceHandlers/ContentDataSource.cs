@@ -9,7 +9,7 @@ public class ContentDataSource(InvocationContext invocationContext) : AppInvocab
 {
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var actions = new ContentActions(InvocationContext);
+        var actions = new ContentActions(InvocationContext, null!);
         var campaigns = await actions.SearchContentAsync(new());
         
         return campaigns.Results

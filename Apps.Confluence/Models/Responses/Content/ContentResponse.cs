@@ -15,4 +15,30 @@ public class ContentResponse
     
     [Display("Title")]
     public string Title { get; set; } = string.Empty;
+
+    [Display("Body")] public BodyResponse Body { get; set; } = new();
+    
+    [DefinitionIgnore]
+    public VersionResponse Version { get; set; } = new();
+}
+
+public class BodyResponse
+{
+    [Display("View")]
+    public ViewResponse View { get; set; } = new();
+}
+
+public class ViewResponse
+{
+    [Display("HTML")]
+    public string Value { get; set; } = string.Empty;
+    
+    [Display("Representation")]
+    public string Representation { get; set; } = string.Empty;
+}
+
+public class VersionResponse
+{
+    [Display("Number")]
+    public int Number { get; set; }
 }
