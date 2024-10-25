@@ -146,7 +146,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
     
-    [Action("Create content", Description = "Creates a new piece of content.")]
+    [Action("Create content", Description = "Creates a new content with specified data.")]
     public async Task<ContentResponse> CreateContentAsync([ActionParameter] CreateContentRequest request)
     {
         var bodyDictionary = new Dictionary<string, object>

@@ -15,7 +15,14 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
     
     protected override Exception ConfigureErrorException(RestResponse response)
     {
-        var error = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
-        return new Exception(error.ToString());
+        try
+        {
+            var error = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
+            return new Exception(error.ToString());
+        }
+        catch (Exception)
+        {
+            return new Exception($"Status code: {response.StatusCode}, Message: {response.Content}");
+        }
     }
 }
