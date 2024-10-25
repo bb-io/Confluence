@@ -12,13 +12,13 @@ public class CreateContentRequest
     public string Type { get; set; } = string.Empty;
     
     [Display("Title")]
-    public string? Title { get; set; }
+    public string Title { get; set; } = string.Empty;
+    
+    [Display("Space ID"), DataSource(typeof(SpaceDataSource))]
+    public string SpaceId { get; set; } = string.Empty;
 
     [StaticDataSource(typeof(ContentStatusDataSource))]
     public string? Status { get; set; }
-    
-    [Display("Space ID"), DataSource(typeof(SpaceDataSource))]
-    public string? SpaceId { get; set; }
     
     [Display("Body HTML")]
     public string? Body { get; set; }
