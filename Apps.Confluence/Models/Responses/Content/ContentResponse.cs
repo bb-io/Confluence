@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Confluence.Models.Responses.Spaces;
+using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Confluence.Models.Responses.Content;
 
@@ -16,10 +17,14 @@ public class ContentResponse
     [Display("Title")]
     public string Title { get; set; } = string.Empty;
 
-    [Display("Body")] public BodyResponse Body { get; set; } = new();
+    [Display("Body")] 
+    public BodyResponse Body { get; set; } = new();
     
     [DefinitionIgnore]
     public VersionResponse Version { get; set; } = new();
+
+    [Display("Space")]
+    public SpaceResponse Space { get; set; } = new();
 }
 
 public class BodyResponse

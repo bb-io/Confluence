@@ -27,7 +27,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}?expand=body.view,version", Method.Get, Creds);
+        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}?expand=body.view,version,space", Method.Get, Creds);
         return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
     }
     
@@ -86,6 +86,53 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             });
         
         await Client.ExecuteWithErrorHandling(updateRequest);
+    }
+    
+    [Action("Create content", Description = "Creates a new piece of content.")]
+    public async Task<ContentResponse> CreateContentAsync([ActionParameter] CreateContentRequest request)
+    {
+        var bodyDictionary = new Dictionary<string, object>
+        {
+            { "type", request.Type }
+        };
+        
+        if (!string.IsNullOrEmpty(request.Title))
+        {
+            bodyDictionary.Add("title", request.Title);
+        }
+        
+        if (!string.IsNullOrEmpty(request.SpaceId))
+        {
+            bodyDictionary.Add("space", new
+            {
+                id = Convert.ToInt32(request.SpaceId)
+            });
+        }
+        
+        if (!string.IsNullOrEmpty(request.Body))
+        {
+            bodyDictionary.Add("body", new
+            {
+                storage = new
+                {
+                    value = request.Body,
+                    representation = "storage"
+                }
+            });
+        }
+        
+        if(!string.IsNullOrEmpty(request.Status))
+        {
+            bodyDictionary.Add("status", new
+            {
+                value = request.Status
+            });
+        }
+        
+        var apiRequest = new ApiRequest("/api/content", Method.Post, Creds)
+            .WithJsonBody(bodyDictionary);
+        
+        return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
     }
     
     [Action("Delete content", Description = "Deletes a piece of content.")]
