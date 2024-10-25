@@ -13,7 +13,7 @@ namespace Apps.Confluence.Polling;
 [PollingEventList]
 public class ContentPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [PollingEvent("On content created",
+    [PollingEvent("On contents created",
         "Polling event. Triggered after specified time interval and returns new content")]
     public async Task<PollingEventResponse<DateMemory, SearchContentResponse>> OnContentCreated(
         PollingEventRequest<DateMemory> request,
@@ -48,7 +48,7 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
         };
     }
 
-    [PollingEvent("On content updated",
+    [PollingEvent("On contents updated",
         "Polling event. Triggered after specified time interval and returns updated content")]
     public async Task<PollingEventResponse<DateMemory, SearchContentResponse>> OnContentUpdated(
         PollingEventRequest<DateMemory> request,
