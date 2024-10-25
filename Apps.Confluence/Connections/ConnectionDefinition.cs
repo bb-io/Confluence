@@ -1,7 +1,8 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Apps.Confluence.Constants;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 
-namespace Apps.App.Connections;
+namespace Apps.Confluence.Connections;
 
 public class ConnectionDefinition : IConnectionDefinition
 {
@@ -9,12 +10,10 @@ public class ConnectionDefinition : IConnectionDefinition
     {
         new()
         {
-            Name = "Developer API key",
-            AuthenticationType = ConnectionAuthenticationType.Undefined,
+            Name = "OAuth2",
+            AuthenticationType = ConnectionAuthenticationType.OAuth2,
             ConnectionUsage = ConnectionUsage.Actions,
-            ConnectionProperties = new List<ConnectionProperty>
-            {
-            }
+            ConnectionProperties = new List<ConnectionProperty>()
         }
     };
 

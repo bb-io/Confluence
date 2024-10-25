@@ -1,18 +1,19 @@
-using Apps.App.Api;
+using Apps.Confluence.Api;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
-namespace Apps.App.Invocables;
+namespace Apps.Confluence.Invocables;
 
 public class AppInvocable : BaseInvocable
 {
     protected AuthenticationCredentialsProvider[] Creds =>
         InvocationContext.AuthenticationCredentialsProviders.ToArray();
 
-    protected AppClient Client { get; }
-    public AppInvocable(InvocationContext invocationContext) : base(invocationContext)
+    protected ApiClient Client { get; }
+
+    protected AppInvocable(InvocationContext invocationContext) : base(invocationContext)
     {
-        Client = new();
+        Client = new ApiClient(Creds);
     }
 }

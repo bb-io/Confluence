@@ -1,17 +1,17 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 
-namespace Apps.App.Connections;
+namespace Apps.Confluence.Connections;
 
 public class ConnectionValidator: IConnectionValidator
 {
-    public async ValueTask<ConnectionValidationResponse> ValidateConnection(
+    public ValueTask<ConnectionValidationResponse> ValidateConnection(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         CancellationToken cancellationToken)
     {
-        return new()
+        return ValueTask.FromResult<ConnectionValidationResponse>(new()
         {
             IsValid = true
-        };
+        });
     }
 }
