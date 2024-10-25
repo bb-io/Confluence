@@ -26,7 +26,14 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
 
         while (true)
         {
-            var apiRequest = new ApiRequest("/api/content?expand=body.view,version,space", Method.Get, Creds);
+            var endpoint = "/api/content?orderby=history.createdDate desc&expand=body.view,version,space";
+            
+            if(request.CreatedFrom.HasValue || request.UpdatedFrom.HasValue)
+            {
+                endpoint += ",history,history.lastUpdated";
+            }
+            
+            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
 
             if (!string.IsNullOrEmpty(request.Status))
             {
@@ -45,6 +52,16 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
 
             if (response.Results != null! && response.Results.Any())
             {
+                if (request.CreatedFrom.HasValue)
+                {
+                    response.Results = response.Results.Where(x => x.History != null && x.History.CreatedDate.ToUniversalTime() >= request.CreatedFrom.Value.ToUniversalTime()).ToList();
+                }
+                
+                if (request.UpdatedFrom.HasValue)
+                {
+                    response.Results = response.Results.Where(x => x.History != null && x.History.LastUpdated.When.ToUniversalTime() >= request.UpdatedFrom.Value.ToUniversalTime()).ToList();
+                }
+                
                 allResults.AddRange(response.Results);
             }
 

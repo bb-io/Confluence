@@ -22,6 +22,9 @@ public class ContentResponse
     
     [DefinitionIgnore]
     public VersionResponse Version { get; set; } = new();
+    
+    [DefinitionIgnore] 
+    public HistoryResponse? History { get; set; }
 
     [Display("Space")]
     public SpaceResponse Space { get; set; } = new();
@@ -46,4 +49,16 @@ public class VersionResponse
 {
     [Display("Number")]
     public int Number { get; set; }
+}
+
+public class HistoryResponse
+{
+    public DateTime CreatedDate { get; set; }
+
+    public LastUpdatedResponse LastUpdated { get; set; } = new();
+}
+
+public class LastUpdatedResponse
+{
+    public DateTime When { get; set; }
 }
