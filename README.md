@@ -36,8 +36,8 @@ You must ensure that you have a Confluence account and access to it. Our app use
 
 ## Events
 
-- **On contents created** - Polling event. Triggered after specified time interval and returns new contents.
-- **On contents updated** - Polling event. Triggered after specified time interval and returns updated contents.
+- **On content created** - Polling event. Triggered after specified time interval and returns new content.
+- **On content updated** - Polling event. Triggered after specified time interval and returns updated content.
 
 ## Error handling
 

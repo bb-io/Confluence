@@ -8,7 +8,7 @@ namespace Apps.Confluence.Actions;
 [ActionList]
 public class DebugActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
-    [Action("[DEBUG] Get authentication credential providers", Description = "Get authentication credentials")]
+    [Action("Debug", Description = "Debug action.")]
     public List<AuthenticationCredentialsProvider> GetCredentialProviders()
     {
         return Creds.ToList();
