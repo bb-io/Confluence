@@ -123,10 +123,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         
         if(!string.IsNullOrEmpty(request.Status))
         {
-            bodyDictionary.Add("status", new
-            {
-                value = request.Status
-            });
+            bodyDictionary.Add("status", request.Status);
         }
         
         var apiRequest = new ApiRequest("/api/content", Method.Post, Creds)
