@@ -20,8 +20,49 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Search content", Description = "Returns a list of content that matches the search criteria.")]
     public async Task<SearchContentResponse> SearchContentAsync([ActionParameter] FilterContentRequest request)
     {
-        var apiRequest = new ApiRequest("/api/content", Method.Get, Creds);
-        return await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+        var allResults = new List<ContentResponse>();
+        var start = 0;
+        var limit = 25;
+
+        while (true)
+        {
+            var apiRequest = new ApiRequest("/api/content?expand=body.view,version,space", Method.Get, Creds);
+
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                apiRequest.AddParameter("status", request.Status, ParameterType.QueryString);
+            }
+
+            if (!string.IsNullOrEmpty(request.ContentType))
+            {
+                apiRequest.AddParameter("type", request.ContentType, ParameterType.QueryString);
+            }
+
+            apiRequest.AddParameter("start", start, ParameterType.QueryString);
+            apiRequest.AddParameter("limit", limit, ParameterType.QueryString);
+
+            var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+
+            if (response.Results != null! && response.Results.Any())
+            {
+                allResults.AddRange(response.Results);
+            }
+
+            if (response.Size < limit)
+            {
+                break;
+            }
+
+            start += limit;
+        }
+
+        return new SearchContentResponse
+        {
+            Results = allResults,
+            Start = 0,
+            Limit = allResults.Count,
+            Size = allResults.Count
+        };
     }
     
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]

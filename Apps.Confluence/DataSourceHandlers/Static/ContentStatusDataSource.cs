@@ -10,7 +10,6 @@ public class ContentStatusDataSource : IStaticDataSourceHandler
         {
             { "current", "Current" },
             { "deleted", "Deleted" },
-            { "historical", "Historical" },
             { "draft", "Draft" }
         };
     }
