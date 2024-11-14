@@ -1,4 +1,5 @@
-﻿using Apps.Confluence.DataSourceHandlers.Static;
+﻿using Apps.Confluence.DataSourceHandlers;
+using Apps.Confluence.DataSourceHandlers.Static;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dictionaries;
 
@@ -11,4 +12,7 @@ public class FilterContentPollingRequest
 
     [Display("Status"), StaticDataSource(typeof(ContentStatusDataSource))]
     public string? Status { get; set; }
+
+    [Display("Space ID"), StaticDataSource(typeof(SpaceDataSource))]
+    public string? SpaceId { get; set; }
 }

@@ -106,7 +106,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         };
     }
     
-    [Action("Update content from HTML", Description = "Updates a content from HTML file.")]
+    [Action("Create content from HTML", Description = "Create a content from HTML file.")]
     public async Task UpdateContentFromHtmlAsync([ActionParameter] UpdateContentFromHtmlRequest request)
     {
         var stream = await fileManagementClient.DownloadAsync(request.File);
@@ -116,19 +116,13 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         
         var htmlString = Encoding.UTF8.GetString(memoryStream.ToArray());
         var htmlEntity = HtmlConverter.ExtractHtmlContent(htmlString);
-        var contentId = request.ContentId ?? htmlEntity.Id 
-            ?? throw new Exception("Could not find content ID. Please provide it in the inputs.");
         
-        var content = await GetContentAsync(new ContentIdentifier()
-        {
-            ContentId = contentId
-        });
-        
-        var updateRequest = new ApiRequest($"/api/content/{contentId}", Method.Put, Creds)
+        var updateRequest = new ApiRequest($"/api/content", Method.Post, Creds)
             .WithJsonBody(new
             {
-                type = content.Type,
+                type = request.ContentType ?? "page",
                 title = htmlEntity.Title,
+                status = "current",
                 body = new
                 {
                     storage = new
@@ -137,9 +131,9 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                         representation = "storage"
                     }
                 },
-                version = new
+                space = new
                 {
-                    number = content.Version.Number + 1
+                    id = Convert.ToInt32(request.SpaceId)
                 }
             });
         

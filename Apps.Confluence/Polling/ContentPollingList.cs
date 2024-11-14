@@ -35,7 +35,7 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
         {
             CreatedFrom = request.Memory.LastInteractionDate, ContentType = filterContentRequest.ContentType,
             Status = filterContentRequest.Status
-        });
+        }, filterContentRequest.SpaceId);
 
         return new()
         {
@@ -83,7 +83,8 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
         };
     }
 
-    private async Task<SearchContentResponse> GetContentWithoutPagination(FilterContentRequest request)
+    private async Task<SearchContentResponse> GetContentWithoutPagination(FilterContentRequest request,
+        string? spaceId = null)
     {
         var endpoint = "/api/content?orderby=history.createdDate desc&expand=body.view,version,space";
         if (request.CreatedFrom.HasValue || request.UpdatedFrom.HasValue)
@@ -95,10 +96,16 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
         var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
         FilterResults(response, request);
 
+        if (!string.IsNullOrEmpty(spaceId))
+        {
+            response.Results = response.Results.Where(x => x.Space != null! && x.Space.Id == spaceId).ToList();
+        }
+
         return response;
     }
 
-    private async Task<SearchContentResponse> GetContentWithPagination(FilterContentRequest request)
+    private async Task<SearchContentResponse> GetContentWithPagination(FilterContentRequest request,
+        string? spaceId = null)
     {
         var allResults = new List<ContentResponse>();
         var start = 0;
@@ -115,6 +122,12 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
 
             var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
             FilterResults(response, request);
+            
+            if (!string.IsNullOrEmpty(spaceId))
+            {
+                response.Results = response.Results.Where(x => x.Space != null! && x.Space.Id == spaceId).ToList();
+            }
+            
             allResults.AddRange(response.Results);
 
             if (response.Size < limit) break;
