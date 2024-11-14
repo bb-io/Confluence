@@ -31,6 +31,7 @@ You must ensure that you have a Confluence account and access to it. Our app use
 - **Get content** - Returns a single content object specified by the content ID.
 - **Get content as HTML** - Returns a single content HTML specified by the content ID.
 - **Update content from HTML** - Updates a content from HTML file.
+- **Create content from HTML** - Creates a content from HTML file.
 - **Create content** - Creates a new content with specified data.
 - **Delete content** - Deletes a content specified by the content ID.
 
