@@ -1,6 +1,7 @@
 ﻿using Apps.Confluence.DataSourceHandlers;
 using Apps.Confluence.DataSourceHandlers.Static;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
 
@@ -13,6 +14,6 @@ public class UpdateContentFromHtmlRequest
     [Display("Space ID"), DataSource(typeof(SpaceDataSource))]
     public string SpaceId { get; set; } = default!;
 
-    [Display("Content type", Description = "By default this value will be set to 'page'"), DataSource(typeof(ContentTypeDataSource))]
+    [Display("Content type", Description = "By default this value will be set to 'page'"), StaticDataSource(typeof(ContentTypeDataSource))]
     public string? ContentType { get; set; }
 }
