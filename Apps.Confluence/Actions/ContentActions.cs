@@ -107,7 +107,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     }
     
     [Action("Create content from HTML", Description = "Create a content from HTML file.")]
-    public async Task UpdateContentFromHtmlAsync([ActionParameter] UpdateContentFromHtmlRequest request)
+    public async Task<ContentResponse> UpdateContentFromHtmlAsync([ActionParameter] UpdateContentFromHtmlRequest request)
     {
         var stream = await fileManagementClient.DownloadAsync(request.File);
         var memoryStream = new MemoryStream();
@@ -137,7 +137,8 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 }
             });
         
-        await Client.ExecuteWithErrorHandling(updateRequest);
+        var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(updateRequest);
+        return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
     
     [Action("Create content", Description = "Creates a new content with specified data.")]
