@@ -26,7 +26,7 @@ public class SpaceDataSource(InvocationContext invocationContext) : AppInvocable
             if (spacesResponse.Results != null! && spacesResponse.Results.Any())
             {
                 var filteredResults = spacesResponse.Results
-                    .Where(x => context.SearchString == null || x.Name.Contains(context.SearchString))
+                    .Where(x => context.SearchString == null || x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
                     .ToDictionary(x => x.Id, x => x.Name);
 
                 foreach (var kvp in filteredResults)
