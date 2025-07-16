@@ -10,17 +10,20 @@ public class OAuth2AuthorizeService(InvocationContext invocationContext)
 {
     public string GetAuthorizationUrl(Dictionary<string, string> values)
     {
-        const string oauthUrl = "https://auth.atlassian.com/authorize";
+        string bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth";
+        const string atlassianAuthorizeUrl = "https://auth.atlassian.com/authorize";
         var parameters = new Dictionary<string, string>
         {
             { "audience", "api.atlassian.com" },
             { "client_id", ApplicationConstants.ClientId },
             { "scope", ApplicationConstants.Scope },
-            { "redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString() },
+            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" },
             { "state", values["state"] },
-            { "response_type", "code" }
+            { "response_type", "code" },
+            { "authorization_url", atlassianAuthorizeUrl},
+            { "actual_redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString() },
         };
-        
-        return QueryHelpers.AddQueryString(oauthUrl, parameters!);
+
+        return QueryHelpers.AddQueryString(bridgeOauthUrl, parameters!);
     }
 }
