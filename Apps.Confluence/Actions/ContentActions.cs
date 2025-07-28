@@ -90,7 +90,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}?expand=body.view,version,space", Method.Get,
+        var apiRequest = new ApiRequest($"rest/api/content/{request.ContentId}?expand=body.view,version,space", Method.Get,
             Creds);
         return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
     }
@@ -98,7 +98,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Get content as HTML", Description = "Returns a single content HTML specified by the content ID.")]
     public async Task<GetContentAsHtmlResponse> GetContentAsHtmlAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}?expand=body.view", Method.Get, Creds);
+        var apiRequest = new ApiRequest($"rest/api/content/{request.ContentId}?expand=body.view", Method.Get, Creds);
         var response = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
 
         var html = HtmlConverter.ConvertToHtml(response);
