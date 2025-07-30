@@ -20,8 +20,8 @@ namespace Tests.Confluence
             var contentActions = new ContentActions(InvocationContext, FileManager);
             var request = new Apps.Confluence.Models.Requests.Content.FilterContentRequest
             {
-                Status = "current",
-                //ContentType = "page",
+                //Status = "current",
+                //ContentType = "whiteboard",
                 //CreatedFrom = DateTime.UtcNow.AddDays(-30)
             };
             var response = await contentActions.SearchContentAsync(request);
@@ -38,7 +38,7 @@ namespace Tests.Confluence
             var contentActions = new ContentActions(InvocationContext, FileManager);
             var request = new ContentIdentifier
             {
-                ContentId = "997982220",
+                ContentId = "98411",
             };
             var response = await contentActions.GetContentAsync(request);
 
@@ -54,7 +54,7 @@ namespace Tests.Confluence
             var contentActions = new ContentActions(InvocationContext, FileManager);
             var request = new ContentIdentifier
             {
-                ContentId = "997982220",
+                ContentId = "98411",
             };
             var response = await contentActions.GetContentAsHtmlAsync(request);
 
@@ -62,6 +62,19 @@ namespace Tests.Confluence
             Console.WriteLine(json);
 
             Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
+        public async Task DeleteContent_ReturnsResults()
+        {
+            var contentActions = new ContentActions(InvocationContext, FileManager);
+            var request = new ContentIdentifier
+            {
+                ContentId = "98411",
+            };
+            await contentActions.DeleteContentAsync(request);
+
+            Assert.IsTrue(true);
         }
     }
 }

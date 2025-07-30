@@ -4,5 +4,5 @@ namespace Apps.Confluence.Models.Responses.Content;
 
 public class GetContentAsHtmlResponse
 {
-    public FileReference File { get; set; } = default!;
+    public FileReference File { get; set; }
 }

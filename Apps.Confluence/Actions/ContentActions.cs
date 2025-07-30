@@ -11,6 +11,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Confluence.Actions;
 
@@ -25,49 +26,41 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var start = 0;
         var limit = 25;
 
+        var cqlParts = new List<string>();
+        if (!string.IsNullOrEmpty(request.ContentType))
+        {
+            cqlParts.Add($"type={request.ContentType}");
+        }
+        if (request.CreatedFrom.HasValue)
+        {
+            cqlParts.Add($"created>=\"{request.CreatedFrom.Value.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}\"");
+        }
+        if (request.UpdatedFrom.HasValue)
+        {
+            cqlParts.Add($"lastModified>=\"{request.UpdatedFrom.Value.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}\"");
+        }
+
+        var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)"; 
+
         while (true)
         {
-            var endpoint = "/api/content?orderby=history.createdDate desc&expand=body.view,version,space";
+            var endpoint = "/rest/api/content/search";
 
-            if (request.CreatedFrom.HasValue || request.UpdatedFrom.HasValue)
-            {
-                endpoint += ",history,history.lastUpdated";
-            }
-
-            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
-
-            if (!string.IsNullOrEmpty(request.Status))
-            {
-                apiRequest.AddParameter("status", request.Status, ParameterType.QueryString);
-            }
-
-            if (!string.IsNullOrEmpty(request.ContentType))
-            {
-                apiRequest.AddParameter("type", request.ContentType, ParameterType.QueryString);
-            }
-
-            apiRequest.AddParameter("start", start, ParameterType.QueryString);
-            apiRequest.AddParameter("limit", limit, ParameterType.QueryString);
+            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+                .AddParameter("cql", cql, ParameterType.QueryString)
+                .AddParameter("start", start, ParameterType.QueryString)
+                .AddParameter("limit", limit, ParameterType.QueryString)
+                .AddParameter("expand", "body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
             var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
 
-            if (response.Results != null! && response.Results.Any())
+            if (response.Results != null && response.Results.Any())
             {
-                if (request.CreatedFrom.HasValue)
-                {
-                    response.Results = response.Results.Where(x =>
-                        x.History != null && x.History.CreatedDate.ToUniversalTime() >=
-                        request.CreatedFrom.Value.ToUniversalTime()).ToList();
-                }
+                var filteredResults = string.IsNullOrEmpty(request.Status)
+                    ? response.Results
+                    : response.Results.Where(r => r.Status == request.Status).ToList();
 
-                if (request.UpdatedFrom.HasValue)
-                {
-                    response.Results = response.Results.Where(x =>
-                        x.History != null && x.History.LastUpdated.When.ToUniversalTime() >=
-                        request.UpdatedFrom.Value.ToUniversalTime()).ToList();
-                }
-
-                allResults.AddRange(response.Results);
+                allResults.AddRange(filteredResults);
             }
 
             if (response.Size < limit)
@@ -90,23 +83,46 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"rest/api/content/{request.ContentId}?expand=body.view,version,space", Method.Get,
-            Creds);
-        return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        var endpoint = "/rest/api/content/search";
+        var cql = $"id={request.ContentId}";
+        var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+            .AddParameter("cql", cql, ParameterType.QueryString)
+            .AddParameter("expand", "body.view,version,space,history,history.lastUpdated", ParameterType.QueryString)
+            .AddParameter("limit", 1, ParameterType.QueryString);
+
+        var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+
+        if (response.Results == null || !response.Results.Any())
+        {
+            throw new PluginApplicationException($"Content with ID {request.ContentId} not found.");
+        }
+
+        return response.Results.First();
     }
 
     [Action("Get content as HTML", Description = "Returns a single content HTML specified by the content ID.")]
     public async Task<GetContentAsHtmlResponse> GetContentAsHtmlAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"rest/api/content/{request.ContentId}?expand=body.view", Method.Get, Creds);
-        var response = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        var endpoint = "/rest/api/content/search";
+        var cql = $"id={request.ContentId}";
+        var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+            .AddParameter("cql", cql, ParameterType.QueryString)
+            .AddParameter("expand", "body.view", ParameterType.QueryString)
+            .AddParameter("limit", 1, ParameterType.QueryString);
 
-        var html = HtmlConverter.ConvertToHtml(response);
+        var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+
+        if (response.Results == null || !response.Results.Any())
+        {
+            throw new PluginApplicationException($"Content with ID {request.ContentId} not found.");
+        }
+
+        var content = response.Results.First();
+        var html = HtmlConverter.ConvertToHtml(content);
         var fileMemoryStream = new MemoryStream(Encoding.UTF8.GetBytes(html));
         fileMemoryStream.Position = 0;
 
-        var fileReference =
-            await fileManagementClient.UploadAsync(fileMemoryStream, "text/html", $"content-{request.ContentId}.html");
+        var fileReference = await fileManagementClient.UploadAsync(fileMemoryStream, "text/html", $"content-{request.ContentId}.html");
         return new()
         {
             File = fileReference
@@ -236,7 +252,39 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Delete content", Description = "Deletes a piece of content.")]
     public async Task DeleteContentAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}", Method.Delete, Creds);
+        var content = await GetContentAsync(new ContentIdentifier { ContentId=request.ContentId});
+        var endpoint=string.Empty;
+
+        if (content.Type == "page")
+        {
+            endpoint = $"api/v2/pages/{request.ContentId}";
+        }
+        else if (content.Type == "blogpost")
+        {
+            endpoint = $"api/v2/blogposts/{request.ContentId}";
+        }
+        else if (content.Type == "comment")
+        {
+            endpoint = $"api/v2/inline-comments/{request.ContentId}";
+        }
+        else if (content.Type == "attachment")
+        {
+            endpoint = $"api/v2/attachments/{request.ContentId}";
+        }
+        else if (content.Type == "attachment")
+        {
+            endpoint = $"api/v2/attachments/{request.ContentId}";
+        }
+        else if (content.Type == "whiteboard")
+        {
+            endpoint = $"api/v2/whiteboards/{request.ContentId}";
+        }
+        else if (content.Type == "embed")
+        {
+            endpoint = $"api/v2/embeds/{request.ContentId}";
+        }
+
+        var apiRequest = new ApiRequest(endpoint, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(apiRequest);
     }
 }
