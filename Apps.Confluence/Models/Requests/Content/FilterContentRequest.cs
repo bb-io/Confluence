@@ -17,4 +17,7 @@ public class FilterContentRequest
     
     [Display("Updated from")]
     public DateTime? UpdatedFrom { get; set; }
+
+    [Display("CQL query")]
+    public string? CqlQuery { get; set; }
 }

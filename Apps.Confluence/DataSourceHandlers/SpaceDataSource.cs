@@ -17,7 +17,7 @@ public class SpaceDataSource(InvocationContext invocationContext) : AppInvocable
 
         while (true)
         {
-            var request = new ApiRequest("/api/space", Method.Get, Creds);
+            var request = new ApiRequest("/api/v2/spaces", Method.Get, Creds);
             request.AddParameter("start", start, ParameterType.QueryString);
             request.AddParameter("limit", limit, ParameterType.QueryString);
 

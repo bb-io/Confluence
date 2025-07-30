@@ -11,6 +11,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Confluence.Actions;
 
@@ -25,49 +26,41 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var start = 0;
         var limit = 25;
 
+        var cqlParts = new List<string>();
+        if (!string.IsNullOrEmpty(request.ContentType))
+        {
+            cqlParts.Add($"type={request.ContentType}");
+        }
+        if (request.CreatedFrom.HasValue)
+        {
+            cqlParts.Add($"created>=\"{request.CreatedFrom.Value.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}\"");
+        }
+        if (request.UpdatedFrom.HasValue)
+        {
+            cqlParts.Add($"lastModified>=\"{request.UpdatedFrom.Value.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}\"");
+        }
+
+        var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)"; 
+
         while (true)
         {
-            var endpoint = "/api/content?orderby=history.createdDate desc&expand=body.view,version,space";
+            var endpoint = "/rest/api/content/search";
 
-            if (request.CreatedFrom.HasValue || request.UpdatedFrom.HasValue)
-            {
-                endpoint += ",history,history.lastUpdated";
-            }
-
-            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
-
-            if (!string.IsNullOrEmpty(request.Status))
-            {
-                apiRequest.AddParameter("status", request.Status, ParameterType.QueryString);
-            }
-
-            if (!string.IsNullOrEmpty(request.ContentType))
-            {
-                apiRequest.AddParameter("type", request.ContentType, ParameterType.QueryString);
-            }
-
-            apiRequest.AddParameter("start", start, ParameterType.QueryString);
-            apiRequest.AddParameter("limit", limit, ParameterType.QueryString);
+            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+                .AddParameter("cql", cql, ParameterType.QueryString)
+                .AddParameter("start", start, ParameterType.QueryString)
+                .AddParameter("limit", limit, ParameterType.QueryString)
+                .AddParameter("expand", "body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
             var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
 
-            if (response.Results != null! && response.Results.Any())
+            if (response.Results != null && response.Results.Any())
             {
-                if (request.CreatedFrom.HasValue)
-                {
-                    response.Results = response.Results.Where(x =>
-                        x.History != null && x.History.CreatedDate.ToUniversalTime() >=
-                        request.CreatedFrom.Value.ToUniversalTime()).ToList();
-                }
+                var filteredResults = string.IsNullOrEmpty(request.Status)
+                    ? response.Results
+                    : response.Results.Where(r => r.Status == request.Status).ToList();
 
-                if (request.UpdatedFrom.HasValue)
-                {
-                    response.Results = response.Results.Where(x =>
-                        x.History != null && x.History.LastUpdated.When.ToUniversalTime() >=
-                        request.UpdatedFrom.Value.ToUniversalTime()).ToList();
-                }
-
-                allResults.AddRange(response.Results);
+                allResults.AddRange(filteredResults);
             }
 
             if (response.Size < limit)
@@ -90,23 +83,46 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}?expand=body.view,version,space", Method.Get,
-            Creds);
-        return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        var endpoint = "/rest/api/content/search";
+        var cql = $"id={request.ContentId}";
+        var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+            .AddParameter("cql", cql, ParameterType.QueryString)
+            .AddParameter("expand", "body.view,version,space,history,history.lastUpdated", ParameterType.QueryString)
+            .AddParameter("limit", 1, ParameterType.QueryString);
+
+        var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+
+        if (response.Results == null || !response.Results.Any())
+        {
+            throw new PluginApplicationException($"Content with ID {request.ContentId} not found.");
+        }
+
+        return response.Results.First();
     }
 
     [Action("Get content as HTML", Description = "Returns a single content HTML specified by the content ID.")]
     public async Task<GetContentAsHtmlResponse> GetContentAsHtmlAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}?expand=body.view", Method.Get, Creds);
-        var response = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        var endpoint = "/rest/api/content/search";
+        var cql = $"id={request.ContentId}";
+        var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+            .AddParameter("cql", cql, ParameterType.QueryString)
+            .AddParameter("expand", "body.view", ParameterType.QueryString)
+            .AddParameter("limit", 1, ParameterType.QueryString);
 
-        var html = HtmlConverter.ConvertToHtml(response);
+        var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+
+        if (response.Results == null || !response.Results.Any())
+        {
+            throw new PluginApplicationException($"Content with ID {request.ContentId} not found.");
+        }
+
+        var content = response.Results.First();
+        var html = HtmlConverter.ConvertToHtml(content);
         var fileMemoryStream = new MemoryStream(Encoding.UTF8.GetBytes(html));
         fileMemoryStream.Position = 0;
 
-        var fileReference =
-            await fileManagementClient.UploadAsync(fileMemoryStream, "text/html", $"content-{request.ContentId}.html");
+        var fileReference = await fileManagementClient.UploadAsync(fileMemoryStream, "text/html", $"content-{request.ContentId}.html");
         return new()
         {
             File = fileReference
@@ -117,6 +133,16 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     public async Task<ContentResponse> UpdateContentFromHtmlAsync(
         [ActionParameter] UpdateContentFromHtmlRequest request)
     {
+        if (string.IsNullOrEmpty(request.ContentType))
+        {
+            throw new PluginApplicationException("Content type is required.");
+        }
+
+        if (string.IsNullOrEmpty(request.SpaceId))
+        {
+            throw new PluginApplicationException("Space ID is required for creating content.");
+        }
+
         var stream = await fileManagementClient.DownloadAsync(request.File);
         var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream);
@@ -125,27 +151,42 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var htmlString = Encoding.UTF8.GetString(memoryStream.ToArray());
         var htmlEntity = HtmlConverter.ExtractHtmlContent(htmlString);
 
-        var updateRequest = new ApiRequest($"/api/content", Method.Post, Creds)
-            .WithJsonBody(new
-            {
-                type = request.ContentType ?? "page",
-                title = htmlEntity.Title,
-                status = "current",
-                body = new
+        var bodyDictionary = new Dictionary<string, object>
+        {
+            { "spaceId", request.SpaceId },
+            { "title", htmlEntity.Title ?? string.Empty },
+            { "status", "current" },
+            { "body", new
                 {
                     storage = new
                     {
-                        value = htmlEntity.HtmlContent,
+                        value = htmlEntity.HtmlContent ?? string.Empty,
                         representation = "storage"
                     }
-                },
-                space = new
-                {
-                    id = Convert.ToInt32(request.SpaceId)
                 }
-            });
+            }
+        };
 
-        var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(updateRequest);
+        var endpoint = string.Empty;
+        switch (request.ContentType.ToLower())
+        {
+            case "page":
+                endpoint = "/api/v2/pages";
+                break;
+            case "blogpost":
+                endpoint = "/api/v2/blogposts";
+                break;
+            case "comment":
+                endpoint = "/api/v2/inline-comments";
+                break;
+            default:
+                throw new PluginApplicationException($"Unsupported content type: {request.ContentType}");
+        }
+
+        var apiRequest = new ApiRequest(endpoint, Method.Post, Creds)
+            .WithJsonBody(bodyDictionary);
+
+        var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
         return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 
@@ -161,65 +202,101 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var htmlString = Encoding.UTF8.GetString(memoryStream.ToArray());
         var htmlEntity = HtmlConverter.ExtractHtmlContent(htmlString);
 
-        var contentId = request.ContentId ?? htmlEntity.Id
-            ?? throw new Exception("Could not find content ID. Please provide it in the inputs.");
-
-        var content = await GetContentAsync(new ContentIdentifier()
+        var contentId = request.ContentId;
+        if (string.IsNullOrEmpty(contentId))
         {
-            ContentId = contentId
-        });
+            if (string.IsNullOrEmpty(htmlEntity.Id))
+            {
+                throw new PluginApplicationException("Could not find content ID. Please provide it in the inputs or HTML meta tag.");
+            }
+            contentId = htmlEntity.Id;
+        }
 
-        var updateRequest = new ApiRequest($"/api/content/{contentId}", Method.Put, Creds)
-            .WithJsonBody(new
+        var content = await GetContentAsync(new ContentIdentifier { ContentId = contentId });
+
+        var endpoint = string.Empty;
+        switch (content.Type.ToLower())
+        {
+            case "page":
+                endpoint = $"/api/v2/pages/{contentId}";
+                break;
+            case "blogpost":
+                endpoint = $"/api/v2/blogposts/{contentId}";
+                break;
+            case "comment":
+                endpoint = $"/api/v2/inline-comments/{contentId}";
+                break;
+            default:
+                throw new PluginApplicationException($"Unsupported content type: {content.Type}");
+        }
+
+        var bodyDictionary = new Dictionary<string, object>
+        {
+            { "id", contentId },
+            { "type", content.Type },
+            { "title", htmlEntity.Title ?? content.Title },
+            { "status", "current" },
+            { "body", new
                 {
-                    type = content.Type,
-                    title = htmlEntity.Title,
-                    body = new
-                    {
-                        storage = new
-                        {
-                            value = htmlEntity.HtmlContent,
-                            representation = "storage"
-                        }
-                    },
-                    version = new
-                    {
-                        number = content.Version.Number + 1
-                    }
+                    value = htmlEntity.HtmlContent ?? content.Body.View.Value,
+                    representation = "storage"
                 }
-            );
-        
+            },
+            { "version", new
+                {
+                    number = content.Version.Number + 1
+                }
+            }
+        };
+
+        var updateRequest = new ApiRequest(endpoint, Method.Put, Creds)
+            .WithJsonBody(bodyDictionary);
+
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
 
     [Action("Create content", Description = "Creates a new content with specified data.")]
-    public async Task<ContentResponse> CreateContentAsync([ActionParameter] CreateContentRequest request)
+    public async Task<CreateContentResponse> CreateContentAsync([ActionParameter] CreateContentRequest request)
     {
-        var bodyDictionary = new Dictionary<string, object>
+        if (string.IsNullOrEmpty(request.Type))
         {
-            { "type", request.Type }
-        };
+            throw new PluginApplicationException("Content type is required.");
+        }
+
+        if (string.IsNullOrEmpty(request.SpaceId))
+        {
+            throw new PluginApplicationException("SpaceId is required for creating content.");
+        }
+
+        var bodyDictionary = new Dictionary<string, object>();
+
+        var endpoint = string.Empty;
+        switch (request.Type.ToLower())
+        {
+            case "page":
+                endpoint = "/api/v2/pages";
+                break;
+            case "blogpost":
+                endpoint = "/api/v2/blogposts";
+                break;
+            case "comment":
+                endpoint = "/api/v2/inline-comments";
+                break;
+            default:
+                throw new PluginApplicationException($"Unsupported content type: {request.Type}");
+        }
 
         if (!string.IsNullOrEmpty(request.Title))
         {
             bodyDictionary.Add("title", request.Title);
         }
 
-        if (!string.IsNullOrEmpty(request.SpaceId))
-        {
-            bodyDictionary.Add("space", new
-            {
-                id = Convert.ToInt32(request.SpaceId)
-            });
-        }
+        bodyDictionary.Add("spaceId", request.SpaceId); 
 
         bodyDictionary.Add("body", new
         {
-            storage = new
-            {
-                value = request.Body ?? string.Empty,
-                representation = "storage"
-            }
+            value = request.Body ?? string.Empty,
+            representation = "storage"
         });
 
         if (!string.IsNullOrEmpty(request.Status))
@@ -227,16 +304,32 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             bodyDictionary.Add("status", request.Status);
         }
 
-        var apiRequest = new ApiRequest("/api/content", Method.Post, Creds)
+        var apiRequest = new ApiRequest(endpoint, Method.Post, Creds)
             .WithJsonBody(bodyDictionary);
 
-        return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        return await Client.ExecuteWithErrorHandling<CreateContentResponse>(apiRequest);
     }
 
     [Action("Delete content", Description = "Deletes a piece of content.")]
     public async Task DeleteContentAsync([ActionParameter] ContentIdentifier request)
     {
-        var apiRequest = new ApiRequest($"/api/content/{request.ContentId}", Method.Delete, Creds);
+        var content = await GetContentAsync(new ContentIdentifier { ContentId=request.ContentId});
+        var endpoint=string.Empty;
+
+        if (content.Type == "page")
+        {
+            endpoint = $"api/v2/pages/{request.ContentId}";
+        }
+        else if (content.Type == "blogpost")
+        {
+            endpoint = $"api/v2/blogposts/{request.ContentId}";
+        }
+        else if (content.Type == "comment")
+        {
+            endpoint = $"api/v2/inline-comments/{request.ContentId}";
+        }
+       
+        var apiRequest = new ApiRequest(endpoint, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(apiRequest);
     }
 }

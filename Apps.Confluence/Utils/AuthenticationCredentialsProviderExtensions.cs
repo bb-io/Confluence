@@ -9,6 +9,6 @@ public static class AuthenticationCredentialsProviderExtensions
     public static Uri GetUrl(this IEnumerable<AuthenticationCredentialsProvider> creds)
     {
         var confluence = creds.Get(CredNames.ConfluenceId).Value;
-        return new Uri($"https://api.atlassian.com/ex/confluence/{confluence}/wiki/rest");
+        return new Uri($"https://api.atlassian.com/ex/confluence/{confluence}/wiki");
     }
 }
