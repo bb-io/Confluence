@@ -70,9 +70,62 @@ namespace Tests.Confluence
             var contentActions = new ContentActions(InvocationContext, FileManager);
             var request = new ContentIdentifier
             {
-                ContentId = "98411",
+                ContentId = "1441825",
             };
             await contentActions.DeleteContentAsync(request);
+
+            Assert.IsTrue(true);
+        }
+
+        [TestMethod]
+        public async Task CreateContent_ReturnsResults()
+        {
+            var contentActions = new ContentActions(InvocationContext, FileManager);
+            var request = new Apps.Confluence.Models.Requests.Content.CreateContentRequest
+            {
+                Type = "blogpost",
+                Title = "Test Page 3",
+                SpaceId = "65882",
+                Status = "current",
+                Body = "<p>This is a test page created via API.</p>"
+            };
+            var response = await contentActions.CreateContentAsync(request);
+
+            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+            Console.WriteLine(json);
+
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
+        public async Task CreateContentFromHtml_ReturnsResults()
+        {
+            var contentActions = new ContentActions(InvocationContext, FileManager);
+            var request = new Apps.Confluence.Models.Requests.Content.UpdateContentFromHtmlRequest
+            {
+                File=new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "content-98411.html" },
+                SpaceId = "65882",
+                ContentType = "blogpost"
+                //1605647
+            };
+            var response = await contentActions.UpdateContentFromHtmlAsync(request);
+
+            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+            Console.WriteLine(json);
+
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
+        public async Task UpdateContentFromHtml_ReturnsResults()
+        {
+            var contentActions = new ContentActions(InvocationContext, FileManager);
+            var request = new Apps.Confluence.Models.Requests.Content.UpdateContentRequest
+            {
+                File = new Blackbird.Applications.Sdk.Common.Files.FileReference { Name = "content-98411.html" },
+                ContentId = "1048591"
+            };
+            await contentActions.UpdateContentFromHtmlWithNotExtstingContentAsync(request);
 
             Assert.IsTrue(true);
         }

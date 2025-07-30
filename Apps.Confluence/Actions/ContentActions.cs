@@ -133,6 +133,16 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     public async Task<ContentResponse> UpdateContentFromHtmlAsync(
         [ActionParameter] UpdateContentFromHtmlRequest request)
     {
+        if (string.IsNullOrEmpty(request.ContentType))
+        {
+            throw new PluginApplicationException("Content type is required.");
+        }
+
+        if (string.IsNullOrEmpty(request.SpaceId))
+        {
+            throw new PluginApplicationException("Space ID is required for creating content.");
+        }
+
         var stream = await fileManagementClient.DownloadAsync(request.File);
         var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream);
@@ -141,27 +151,42 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var htmlString = Encoding.UTF8.GetString(memoryStream.ToArray());
         var htmlEntity = HtmlConverter.ExtractHtmlContent(htmlString);
 
-        var updateRequest = new ApiRequest($"/api/content", Method.Post, Creds)
-            .WithJsonBody(new
-            {
-                type = request.ContentType ?? "page",
-                title = htmlEntity.Title,
-                status = "current",
-                body = new
+        var bodyDictionary = new Dictionary<string, object>
+        {
+            { "spaceId", request.SpaceId },
+            { "title", htmlEntity.Title ?? string.Empty },
+            { "status", "current" },
+            { "body", new
                 {
                     storage = new
                     {
-                        value = htmlEntity.HtmlContent,
+                        value = htmlEntity.HtmlContent ?? string.Empty,
                         representation = "storage"
                     }
-                },
-                space = new
-                {
-                    id = Convert.ToInt32(request.SpaceId)
                 }
-            });
+            }
+        };
 
-        var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(updateRequest);
+        var endpoint = string.Empty;
+        switch (request.ContentType.ToLower())
+        {
+            case "page":
+                endpoint = "/api/v2/pages";
+                break;
+            case "blogpost":
+                endpoint = "/api/v2/blogposts";
+                break;
+            case "comment":
+                endpoint = "/api/v2/inline-comments";
+                break;
+            default:
+                throw new PluginApplicationException($"Unsupported content type: {request.ContentType}");
+        }
+
+        var apiRequest = new ApiRequest(endpoint, Method.Post, Creds)
+            .WithJsonBody(bodyDictionary);
+
+        var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
         return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 
@@ -177,65 +202,101 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var htmlString = Encoding.UTF8.GetString(memoryStream.ToArray());
         var htmlEntity = HtmlConverter.ExtractHtmlContent(htmlString);
 
-        var contentId = request.ContentId ?? htmlEntity.Id
-            ?? throw new Exception("Could not find content ID. Please provide it in the inputs.");
-
-        var content = await GetContentAsync(new ContentIdentifier()
+        var contentId = request.ContentId;
+        if (string.IsNullOrEmpty(contentId))
         {
-            ContentId = contentId
-        });
+            if (string.IsNullOrEmpty(htmlEntity.Id))
+            {
+                throw new PluginApplicationException("Could not find content ID. Please provide it in the inputs or HTML meta tag.");
+            }
+            contentId = htmlEntity.Id;
+        }
 
-        var updateRequest = new ApiRequest($"/api/content/{contentId}", Method.Put, Creds)
-            .WithJsonBody(new
+        var content = await GetContentAsync(new ContentIdentifier { ContentId = contentId });
+
+        var endpoint = string.Empty;
+        switch (content.Type.ToLower())
+        {
+            case "page":
+                endpoint = $"/api/v2/pages/{contentId}";
+                break;
+            case "blogpost":
+                endpoint = $"/api/v2/blogposts/{contentId}";
+                break;
+            case "comment":
+                endpoint = $"/api/v2/inline-comments/{contentId}";
+                break;
+            default:
+                throw new PluginApplicationException($"Unsupported content type: {content.Type}");
+        }
+
+        var bodyDictionary = new Dictionary<string, object>
+        {
+            { "id", contentId },
+            { "type", content.Type },
+            { "title", htmlEntity.Title ?? content.Title },
+            { "status", "current" },
+            { "body", new
                 {
-                    type = content.Type,
-                    title = htmlEntity.Title,
-                    body = new
-                    {
-                        storage = new
-                        {
-                            value = htmlEntity.HtmlContent,
-                            representation = "storage"
-                        }
-                    },
-                    version = new
-                    {
-                        number = content.Version.Number + 1
-                    }
+                    value = htmlEntity.HtmlContent ?? content.Body.View.Value,
+                    representation = "storage"
                 }
-            );
-        
+            },
+            { "version", new
+                {
+                    number = content.Version.Number + 1
+                }
+            }
+        };
+
+        var updateRequest = new ApiRequest(endpoint, Method.Put, Creds)
+            .WithJsonBody(bodyDictionary);
+
         await Client.ExecuteWithErrorHandling(updateRequest);
     }
 
     [Action("Create content", Description = "Creates a new content with specified data.")]
-    public async Task<ContentResponse> CreateContentAsync([ActionParameter] CreateContentRequest request)
+    public async Task<CreateContentResponse> CreateContentAsync([ActionParameter] CreateContentRequest request)
     {
-        var bodyDictionary = new Dictionary<string, object>
+        if (string.IsNullOrEmpty(request.Type))
         {
-            { "type", request.Type }
-        };
+            throw new PluginApplicationException("Content type is required.");
+        }
+
+        if (string.IsNullOrEmpty(request.SpaceId))
+        {
+            throw new PluginApplicationException("SpaceId is required for creating content.");
+        }
+
+        var bodyDictionary = new Dictionary<string, object>();
+
+        var endpoint = string.Empty;
+        switch (request.Type.ToLower())
+        {
+            case "page":
+                endpoint = "/api/v2/pages";
+                break;
+            case "blogpost":
+                endpoint = "/api/v2/blogposts";
+                break;
+            case "comment":
+                endpoint = "/api/v2/inline-comments";
+                break;
+            default:
+                throw new PluginApplicationException($"Unsupported content type: {request.Type}");
+        }
 
         if (!string.IsNullOrEmpty(request.Title))
         {
             bodyDictionary.Add("title", request.Title);
         }
 
-        if (!string.IsNullOrEmpty(request.SpaceId))
-        {
-            bodyDictionary.Add("space", new
-            {
-                id = Convert.ToInt32(request.SpaceId)
-            });
-        }
+        bodyDictionary.Add("spaceId", request.SpaceId); 
 
         bodyDictionary.Add("body", new
         {
-            storage = new
-            {
-                value = request.Body ?? string.Empty,
-                representation = "storage"
-            }
+            value = request.Body ?? string.Empty,
+            representation = "storage"
         });
 
         if (!string.IsNullOrEmpty(request.Status))
@@ -243,10 +304,10 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             bodyDictionary.Add("status", request.Status);
         }
 
-        var apiRequest = new ApiRequest("/api/content", Method.Post, Creds)
+        var apiRequest = new ApiRequest(endpoint, Method.Post, Creds)
             .WithJsonBody(bodyDictionary);
 
-        return await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        return await Client.ExecuteWithErrorHandling<CreateContentResponse>(apiRequest);
     }
 
     [Action("Delete content", Description = "Deletes a piece of content.")]
@@ -267,23 +328,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         {
             endpoint = $"api/v2/inline-comments/{request.ContentId}";
         }
-        else if (content.Type == "attachment")
-        {
-            endpoint = $"api/v2/attachments/{request.ContentId}";
-        }
-        else if (content.Type == "attachment")
-        {
-            endpoint = $"api/v2/attachments/{request.ContentId}";
-        }
-        else if (content.Type == "whiteboard")
-        {
-            endpoint = $"api/v2/whiteboards/{request.ContentId}";
-        }
-        else if (content.Type == "embed")
-        {
-            endpoint = $"api/v2/embeds/{request.ContentId}";
-        }
-
+       
         var apiRequest = new ApiRequest(endpoint, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(apiRequest);
     }
