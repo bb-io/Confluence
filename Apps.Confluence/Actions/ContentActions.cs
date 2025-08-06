@@ -24,8 +24,8 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     {
         var allResults = new List<ContentResponse>();
         var start = 0;
-        var limit = 25;
-        var maxIterations = 1000; 
+        var limit = 100;
+        var maxIterations = 1000;
         var currentIteration = 0;
 
         var validContentTypes = new HashSet<string> { "page", "blogpost", "comment", "attachment" };
@@ -58,6 +58,20 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 throw new PluginMisconfigurationException($"UpdatedFrom date ({updatedDate}) cannot be in the future.");
             }
             cqlParts.Add($"lastModified>=\"{updatedDate:yyyy-MM-dd}\"");
+        }
+
+        if (!string.IsNullOrEmpty(request.CqlQuery))
+        {
+            var trimmedCqlQuery = request.CqlQuery.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedCqlQuery))
+            {
+                throw new PluginMisconfigurationException("CQL query cannot be empty or whitespace.");
+            }
+            if (trimmedCqlQuery.Contains(";") || trimmedCqlQuery.Contains("--"))
+            {
+                throw new PluginMisconfigurationException("CQL query contains invalid characters (e.g., ';' or '--').");
+            }
+            cqlParts.Add($"({trimmedCqlQuery})");
         }
 
         var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)";
@@ -128,7 +142,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             }
             catch (Exception ex)
             {
-                break; 
+                break;
             }
         }
 
