@@ -20,9 +20,11 @@ namespace Tests.Confluence
             var contentActions = new ContentActions(InvocationContext, FileManager);
             var request = new Apps.Confluence.Models.Requests.Content.FilterContentRequest
             {
-                //Status = "current",
-                ContentType = "blogpost",
+                Status = "current",
+                ContentType = "page",
                 //CreatedFrom = DateTime.UtcNow.AddDays(-30)
+                //UpdatedFrom = DateTime.UtcNow.AddDays(-10),
+                //CqlQuery = "type=page AND status=current"
             };
             var response = await contentActions.SearchContentAsync(request);
 
