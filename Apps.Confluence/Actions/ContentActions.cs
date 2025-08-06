@@ -24,7 +24,9 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     {
         var allResults = new List<ContentResponse>();
         var start = 0;
-        var limit = 25;
+        var limit = 100;
+        var maxIterations = 1000;
+        var currentIteration = 0;
 
         var validContentTypes = new HashSet<string> { "page", "blogpost", "comment", "attachment" };
         var cqlParts = new List<string>();
@@ -57,12 +59,28 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             }
             cqlParts.Add($"lastModified>=\"{updatedDate:yyyy-MM-dd}\"");
         }
+
+        if (!string.IsNullOrEmpty(request.CqlQuery))
+        {
+            var trimmedCqlQuery = request.CqlQuery.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedCqlQuery))
+            {
+                throw new PluginMisconfigurationException("CQL query cannot be empty or whitespace.");
+            }
+            if (trimmedCqlQuery.Contains(";") || trimmedCqlQuery.Contains("--"))
+            {
+                throw new PluginMisconfigurationException("CQL query contains invalid characters (e.g., ';' or '--').");
+            }
+            cqlParts.Add($"({trimmedCqlQuery})");
+        }
+
         var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)";
 
-        while (true)
+        while (currentIteration < maxIterations)
         {
-            var endpoint = "/rest/api/content/search";
+            currentIteration++;
 
+            var endpoint = "/rest/api/content/search";
             var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
                 .AddParameter("cql", cql, ParameterType.QueryString)
                 .AddParameter("start", start, ParameterType.QueryString)
@@ -73,25 +91,58 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             {
                 var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
 
+                if (response == null)
+                {
+                    break;
+                }
+
                 if (response.Results != null && response.Results.Any())
                 {
                     var filteredResults = string.IsNullOrEmpty(request.Status)
                         ? response.Results
                         : response.Results.Where(r => r.Status == request.Status).ToList();
 
-                    allResults.AddRange(filteredResults);
-                }
+                    if (filteredResults.Any())
+                    {
+                        allResults.AddRange(filteredResults);
+                    }
 
-                if (response.Size < limit)
+                    if (response.Results.Count < limit)
+                    {
+                        break;
+                    }
+
+                    var hasNextPage = false;
+                    if (response.Links != null)
+                    {
+                        hasNextPage = !string.IsNullOrEmpty(response.Links.Next);
+                    }
+
+                    if (!hasNextPage)
+                    {
+                        break;
+                    }
+
+                    var newStart = start + limit;
+                    if (newStart <= start)
+                    {
+                        break;
+                    }
+                    start = newStart;
+                }
+                else
+                {
+
+                    break;
+                }
+                if (response.Size.HasValue && start >= response.Size.Value)
                 {
                     break;
                 }
-
-                start += limit;
             }
             catch (Exception ex)
             {
-                throw;
+                break;
             }
         }
 

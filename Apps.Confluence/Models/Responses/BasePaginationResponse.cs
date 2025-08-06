@@ -13,5 +13,5 @@ public class BasePaginationResponse<T>
     public int Limit { get; set; }
     
     [DefinitionIgnore]
-    public int Size { get; set; }
+    public int? Size { get; set; }
 }
