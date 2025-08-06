@@ -21,7 +21,7 @@ namespace Tests.Confluence
             var request = new Apps.Confluence.Models.Requests.Content.FilterContentRequest
             {
                 //Status = "current",
-                //ContentType = "whiteboard",
+                ContentType = "blogpost",
                 //CreatedFrom = DateTime.UtcNow.AddDays(-30)
             };
             var response = await contentActions.SearchContentAsync(request);

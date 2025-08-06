@@ -26,21 +26,38 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var start = 0;
         var limit = 25;
 
+        var validContentTypes = new HashSet<string> { "page", "blogpost", "comment", "attachment" };
         var cqlParts = new List<string>();
+
         if (!string.IsNullOrEmpty(request.ContentType))
         {
-            cqlParts.Add($"type={request.ContentType}");
-        }
-        if (request.CreatedFrom.HasValue)
-        {
-            cqlParts.Add($"created>=\"{request.CreatedFrom.Value.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}\"");
-        }
-        if (request.UpdatedFrom.HasValue)
-        {
-            cqlParts.Add($"lastModified>=\"{request.UpdatedFrom.Value.ToUniversalTime():yyyy-MM-dd'T'HH:mm:ss'Z'}\"");
+            if (!validContentTypes.Contains(request.ContentType.ToLower()))
+            {
+                throw new PluginMisconfigurationException($"Invalid content type: {request.ContentType}. Valid types are: {string.Join(", ", validContentTypes)}");
+            }
+            cqlParts.Add($"type={request.ContentType.ToLower()}");
         }
 
-        var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)"; 
+        if (request.CreatedFrom.HasValue)
+        {
+            var createdDate = request.CreatedFrom.Value.ToUniversalTime();
+            if (createdDate > DateTime.UtcNow)
+            {
+                throw new PluginMisconfigurationException($"CreatedFrom date ({createdDate}) cannot be in the future.");
+            }
+            cqlParts.Add($"created>=\"{createdDate:yyyy-MM-dd}\"");
+        }
+
+        if (request.UpdatedFrom.HasValue)
+        {
+            var updatedDate = request.UpdatedFrom.Value.ToUniversalTime();
+            if (updatedDate > DateTime.UtcNow)
+            {
+                throw new PluginMisconfigurationException($"UpdatedFrom date ({updatedDate}) cannot be in the future.");
+            }
+            cqlParts.Add($"lastModified>=\"{updatedDate:yyyy-MM-dd}\"");
+        }
+        var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)";
 
         while (true)
         {
@@ -52,23 +69,30 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 .AddParameter("limit", limit, ParameterType.QueryString)
                 .AddParameter("expand", "body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
-            var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
-
-            if (response.Results != null && response.Results.Any())
+            try
             {
-                var filteredResults = string.IsNullOrEmpty(request.Status)
-                    ? response.Results
-                    : response.Results.Where(r => r.Status == request.Status).ToList();
+                var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
 
-                allResults.AddRange(filteredResults);
+                if (response.Results != null && response.Results.Any())
+                {
+                    var filteredResults = string.IsNullOrEmpty(request.Status)
+                        ? response.Results
+                        : response.Results.Where(r => r.Status == request.Status).ToList();
+
+                    allResults.AddRange(filteredResults);
+                }
+
+                if (response.Size < limit)
+                {
+                    break;
+                }
+
+                start += limit;
             }
-
-            if (response.Size < limit)
+            catch (Exception ex)
             {
-                break;
+                throw;
             }
-
-            start += limit;
         }
 
         return new SearchContentResponse

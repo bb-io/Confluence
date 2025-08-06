@@ -10,7 +10,8 @@ public class ContentTypeDataSource : IStaticDataSourceHandler
         {
             { "page", "Page" },
             { "blogpost", "Blogpost" },
-            { "comment", "Comment" }
+            { "comment", "Comment" },
+            { "attachment", "Attachment" }
         };
     }
 }
