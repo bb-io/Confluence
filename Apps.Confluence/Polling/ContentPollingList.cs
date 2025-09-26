@@ -1,4 +1,5 @@
-﻿using Apps.Confluence.Api;
+﻿using Apps.Confluence.Actions;
+using Apps.Confluence.Api;
 using Apps.Confluence.Invocables;
 using Apps.Confluence.Models.Requests.Content;
 using Apps.Confluence.Models.Responses.Content;
@@ -59,30 +60,29 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
             return new()
             {
                 FlyBird = false,
-                Memory = new()
-                {
-                    LastInteractionDate = DateTime.UtcNow
-                }
+                Memory = new() { LastInteractionDate = DateTime.UtcNow }
             };
         }
 
-        var content = await GetContentWithPagination(new FilterContentRequest
+        var from = request.Memory.LastInteractionDate.AddMinutes(-2);
+        var action = new ContentActions(InvocationContext, null!);
+
+        var searchResponse = await action.SearchContentAsync(new FilterContentRequest
         {
-            UpdatedFrom = request.Memory.LastInteractionDate, ContentType = filterContentRequest.ContentType,
-            Status = filterContentRequest.Status
+            ContentType = filterContentRequest.ContentType,
+            Status = filterContentRequest.Status,
+            UpdatedFrom = from
         });
 
         return new()
         {
-            FlyBird = content.Results.Any(),
-            Result = content,
-            Memory = new()
-            {
-                LastInteractionDate = DateTime.UtcNow
-            }
+            FlyBird = searchResponse.Results?.Any() == true,
+            Result = searchResponse,
+            Memory = new() { LastInteractionDate = DateTime.UtcNow }
         };
     }
 
+  
     private async Task<SearchContentResponse> GetContentWithoutPagination(FilterContentRequest request,
         string? spaceId = null)
     {
@@ -102,45 +102,6 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
         }
 
         return response;
-    }
-
-    private async Task<SearchContentResponse> GetContentWithPagination(FilterContentRequest request,
-        string? spaceId = null)
-    {
-        var allResults = new List<ContentResponse>();
-        var start = 0;
-        var limit = 25;
-
-        while (true)
-        {
-            var endpoint = "/api/content?orderby=history.createdDate desc&expand=body.view,version,space";
-            if (request.CreatedFrom.HasValue || request.UpdatedFrom.HasValue)
-                endpoint += ",history,history.lastUpdated";
-
-            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
-            AddRequestParameters(apiRequest, request, start, limit);
-
-            var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
-            FilterResults(response, request);
-            
-            if (!string.IsNullOrEmpty(spaceId))
-            {
-                response.Results = response.Results.Where(x => x.Space != null! && x.Space.Id == spaceId).ToList();
-            }
-            
-            allResults.AddRange(response.Results);
-
-            if (response.Size < limit) break;
-            start += limit;
-        }
-
-        return new SearchContentResponse
-        {
-            Results = allResults,
-            Start = 0,
-            Limit = allResults.Count,
-            Size = allResults.Count
-        };
     }
 
     private void AddRequestParameters(ApiRequest apiRequest, FilterContentRequest request, int? start = null,
