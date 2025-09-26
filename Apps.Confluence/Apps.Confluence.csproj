@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Confluence [Beta]</Product>
         <Description>Create, collaborate, and organize all your work in one place. Confluence is a team workspace where knowledge and collaboration meet. Dynamic pages give your team a place to create, capture, and collaborate on any project or idea.</Description>
-        <Version>1.0.7</Version>
+        <Version>1.0.8</Version>
         <PackageId>Apps.Confluence</PackageId>
         <RootNamespace>Apps.Confluence</RootNamespace>
         <AssemblyName>Apps.Confluence</AssemblyName>
