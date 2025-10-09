@@ -5,7 +5,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.Confluence.Actions;
 
-[ActionList]
+[ActionList("Debug")]
 public class DebugActions(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
     [Action("Debug", Description = "Debug action.")]
