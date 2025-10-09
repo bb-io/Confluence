@@ -15,7 +15,7 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Confluence.Actions;
 
-[ActionList]
+[ActionList("Content")]
 public class ContentActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
