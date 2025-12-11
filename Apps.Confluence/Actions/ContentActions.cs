@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Apps.Confluence.Api;
+﻿using Apps.Confluence.Api;
 using Apps.Confluence.Invocables;
 using Apps.Confluence.Models.Identifiers;
 using Apps.Confluence.Models.Requests.Content;
@@ -7,11 +6,13 @@ using Apps.Confluence.Models.Responses.Content;
 using Apps.Confluence.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Invocation;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Blackbird.Applications.Sdk.Utils.Extensions.Http;
-using RestSharp;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
+using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using RestSharp;
+using System.Text;
 
 namespace Apps.Confluence.Actions;
 
@@ -19,6 +20,7 @@ namespace Apps.Confluence.Actions;
 public class ContentActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
+    [BlueprintActionDefinition(BlueprintAction.SearchContent)]
     [Action("Search content", Description = "Returns a list of content that matches the search criteria.")]
     public async Task<SearchContentResponse> SearchContentAsync([ActionParameter] FilterContentRequest request)
     {
@@ -48,6 +50,16 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 throw new PluginMisconfigurationException($"CreatedFrom date ({createdDate}) cannot be in the future.");
             }
             cqlParts.Add($"created>=\"{createdDate:yyyy-MM-dd}\"");
+        }
+
+        if (!string.IsNullOrEmpty(request.SpaceId))
+        {
+            cqlParts.Add($"space = \"{request.SpaceId}\"");
+        }
+
+        if (!string.IsNullOrEmpty(request.ParentId))
+        {
+            cqlParts.Add($"parent = {request.ParentId}");
         }
 
         if (request.UpdatedFrom.HasValue)
@@ -85,7 +97,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 .AddParameter("cql", cql, ParameterType.QueryString)
                 .AddParameter("start", start, ParameterType.QueryString)
                 .AddParameter("limit", limit, ParameterType.QueryString)
-                .AddParameter("expand", "body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
+                .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
             try
             {
@@ -175,7 +187,8 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         return response.Results.First();
     }
 
-    [Action("Get content as HTML", Description = "Returns a single content HTML specified by the content ID.")]
+    [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
+    [Action("Download content", Description = "Returns a single content HTML specified by the content ID.")]
     public async Task<GetContentAsHtmlResponse> GetContentAsHtmlAsync([ActionParameter] ContentIdentifier request)
     {
         var endpoint = "/rest/api/content/search";
@@ -204,9 +217,9 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
-    [Action("Create content from HTML", Description = "Create a content from HTML file.")]
-    public async Task<ContentResponse> UpdateContentFromHtmlAsync(
-        [ActionParameter] UpdateContentFromHtmlRequest request)
+    [Action("Create content from HTML", Description = "Create content from an HTML file.")]
+    public async Task<ContentResponse> CreateContentFromHtmlAsync(
+        [ActionParameter] CreateContentFromHtmlRequest request)
     {
         if (string.IsNullOrEmpty(request.ContentType))
         {
@@ -242,6 +255,12 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             }
         };
 
+        if (request.ContentType.Equals("page", StringComparison.OrdinalIgnoreCase)
+       && !string.IsNullOrEmpty(request.ParentId))
+        {
+            bodyDictionary["parentId"] = request.ParentId;
+        }
+
         var endpoint = string.Empty;
         switch (request.ContentType.ToLower())
         {
@@ -255,7 +274,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 endpoint = "/api/v2/inline-comments";
                 break;
             default:
-                throw new PluginApplicationException($"Unsupported content type: {request.ContentType}");
+                throw new PluginMisconfigurationException($"Unsupported content type: {request.ContentType}");
         }
 
         var apiRequest = new ApiRequest(endpoint, Method.Post, Creds)
@@ -265,8 +284,9 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 
+    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Update content from HTML", Description = "Updates a content from HTML file.")]
-    public async Task UpdateContentFromHtmlWithNotExtstingContentAsync(
+    public async Task UpdateContentFromHtml(
         [ActionParameter] UpdateContentRequest request)
     {
         var stream = await fileManagementClient.DownloadAsync(request.File);
