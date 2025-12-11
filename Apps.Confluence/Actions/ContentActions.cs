@@ -96,7 +96,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
 
             if (!string.IsNullOrEmpty(request.SpaceId))
             {
-                apiRequest.AddQueryParameter("spacekey", request.SpaceId);
+                apiRequest.AddQueryParameter("spaceKey", request.SpaceId);
             }
             try
             {
