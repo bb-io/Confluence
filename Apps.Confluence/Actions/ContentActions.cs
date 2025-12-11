@@ -52,11 +52,6 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             cqlParts.Add($"created>=\"{createdDate:yyyy-MM-dd}\"");
         }
 
-        if (!string.IsNullOrEmpty(request.SpaceId))
-        {
-            cqlParts.Add($"space = \"{request.SpaceId}\"");
-        }
-
         if (!string.IsNullOrEmpty(request.ParentId))
         {
             cqlParts.Add($"parent = {request.ParentId}");
@@ -99,6 +94,10 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 .AddParameter("limit", limit, ParameterType.QueryString)
                 .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
+            if (!string.IsNullOrEmpty(request.SpaceId))
+            {
+                apiRequest.AddQueryParameter("spacekey", request.SpaceId);
+            }
             try
             {
                 var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
