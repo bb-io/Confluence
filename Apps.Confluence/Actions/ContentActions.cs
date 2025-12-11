@@ -52,10 +52,10 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             cqlParts.Add($"created>=\"{createdDate:yyyy-MM-dd}\"");
         }
 
-        if (!string.IsNullOrEmpty(request.SpaceId))
-        {
-            cqlParts.Add($"space = {request.SpaceId}");
-        }
+        //if (!string.IsNullOrEmpty(request.SpaceId))
+        //{
+        //    cqlParts.Add($"space = {request.SpaceId}");
+        //}
 
         if (!string.IsNullOrEmpty(request.ParentId))
         {
@@ -156,6 +156,13 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             {
                 break;
             }
+        }
+
+        if (!string.IsNullOrEmpty(request.SpaceId))
+        {
+            allResults = allResults
+                .Where(r => r.Space?.Id == request.SpaceId)
+                .ToList();
         }
 
         return new SearchContentResponse
