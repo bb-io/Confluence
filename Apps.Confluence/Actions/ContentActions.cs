@@ -217,6 +217,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Create content from HTML", Description = "Create content from an HTML file.")]
     public async Task<ContentResponse> CreateContentFromHtmlAsync(
         [ActionParameter] CreateContentFromHtmlRequest request)
@@ -284,7 +285,6 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 
-    [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Update content from HTML", Description = "Updates a content from HTML file.")]
     public async Task UpdateContentFromHtml(
         [ActionParameter] UpdateContentRequest request)

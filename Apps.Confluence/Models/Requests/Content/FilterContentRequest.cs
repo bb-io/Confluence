@@ -15,7 +15,7 @@ public class FilterContentRequest
     public string? Status { get; set; }
 
     [Display("Space ID"), DataSource(typeof(SpaceDataSource))]
-    public string SpaceId { get; set; } = string.Empty;
+    public string? SpaceId { get; set; } = string.Empty;
 
     [Display("Created from")]
     public DateTime? CreatedFrom { get; set; }
