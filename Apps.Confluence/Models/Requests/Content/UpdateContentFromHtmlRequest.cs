@@ -17,6 +17,6 @@ public class CreateContentFromHtmlRequest
     [Display("Content type", Description = "By default this value will be set to 'page'"), StaticDataSource(typeof(ContentTypeDataSource))]
     public string? ContentType { get; set; }
 
-    [Display("Parent ID", Description = "Only for pages")]
+    [Display("Parent ID", Description = "Only for pages"), DataSource(typeof(ContentDataSource))]
     public string? ParentId { get; set; }
 }
