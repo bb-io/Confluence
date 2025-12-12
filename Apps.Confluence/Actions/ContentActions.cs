@@ -178,7 +178,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
         var endpoint = "/rest/api/content/search";
-        var cql = $"contentId={request.ContentId}";
+        var cql = $"id={request.ContentId}";
         var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString)
             .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString)
