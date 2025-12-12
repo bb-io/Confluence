@@ -8,6 +8,7 @@ public class SearchContentResponse : BasePaginationResponse<ContentResponse>
     [Display("Contents")]
     public override List<ContentResponse> Results { get; set; } = new();
 
+    [DefinitionIgnore]
     [JsonProperty("_links")]
     public SearchResponseLinks Links { get; set; } = new();
 }

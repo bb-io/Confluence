@@ -103,14 +103,14 @@ namespace Tests.Confluence
         public async Task CreateContentFromHtml_ReturnsResults()
         {
             var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new Apps.Confluence.Models.Requests.Content.UpdateContentFromHtmlRequest
+            var request = new Apps.Confluence.Models.Requests.Content.CreateContentFromHtmlRequest
             {
                 File=new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "content-98411.html" },
                 SpaceId = "65882",
                 ContentType = "blogpost"
                 //1605647
             };
-            var response = await contentActions.UpdateContentFromHtmlAsync(request);
+            var response = await contentActions.CreateContentFromHtmlAsync(request);
 
             var json = JsonConvert.SerializeObject(response, Formatting.Indented);
             Console.WriteLine(json);
@@ -127,7 +127,7 @@ namespace Tests.Confluence
                 File = new Blackbird.Applications.Sdk.Common.Files.FileReference { Name = "content-98411.html" },
                 ContentId = "1048591"
             };
-            await contentActions.UpdateContentFromHtmlWithNotExtstingContentAsync(request);
+            await contentActions.UpdateContentFromHtml(request);
 
             Assert.IsTrue(true);
         }

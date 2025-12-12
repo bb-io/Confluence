@@ -7,6 +7,7 @@ using Apps.Confluence.Polling.Models;
 using Apps.Confluence.Polling.Models.Requests;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
+using Blackbird.Applications.SDK.Blueprints;
 using RestSharp;
 
 namespace Apps.Confluence.Polling;
@@ -14,6 +15,7 @@ namespace Apps.Confluence.Polling;
 [PollingEventList]
 public class ContentPollingList(InvocationContext invocationContext) : AppInvocable(invocationContext)
 {
+    [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdatedMultiple)]
     [PollingEvent("On content created",
         "Polling event. Triggered after specified time interval and returns new content.")]
     public async Task<PollingEventResponse<DateMemory, SearchContentResponse>> OnContentCreated(

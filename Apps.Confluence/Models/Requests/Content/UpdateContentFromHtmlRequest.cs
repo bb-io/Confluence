@@ -7,7 +7,7 @@ using Blackbird.Applications.Sdk.Common.Files;
 
 namespace Apps.Confluence.Models.Requests.Content;
 
-public class UpdateContentFromHtmlRequest
+public class CreateContentFromHtmlRequest
 {
     public FileReference File { get; set; } = default!;
 
@@ -15,5 +15,8 @@ public class UpdateContentFromHtmlRequest
     public string SpaceId { get; set; } = default!;
 
     [Display("Content type", Description = "By default this value will be set to 'page'"), StaticDataSource(typeof(ContentTypeDataSource))]
-    public string? ContentType { get; set; }
+    public string? ContentType { get; set; } = "page";
+
+    [Display("Parent ID", Description = "Only for pages"), DataSource(typeof(ContentDataSource))]
+    public string? ParentId { get; set; }
 }

@@ -38,14 +38,18 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
     }
     protected override Exception ConfigureErrorException(RestResponse response)
     {
+        string errorMessage = "";
         try
         {
-            var error = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
-            return new PluginApplicationException(error.ToString());
+            var errors = JsonConvert.DeserializeObject<ErrorResponse>(response.Content!)!;
+            errorMessage = string.Join(" | ", errors.Errors.Select(e => e.ToString()));
         }
         catch (Exception)
         {
-            return new PluginApplicationException($"Status code: {response.StatusCode}, Message: {response.Content}");
+            var error = JsonConvert.DeserializeObject<ErrorDto>(response.Content!)!;
+            errorMessage = error.ToString();
         }
+
+        throw new PluginApplicationException(errorMessage);
     }
 }

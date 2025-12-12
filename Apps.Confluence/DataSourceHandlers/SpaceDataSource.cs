@@ -35,7 +35,7 @@ public class SpaceDataSource(InvocationContext invocationContext) : AppInvocable
                 }
             }
 
-            if (spacesResponse.Size < limit)
+            if (spacesResponse.Results?.Count() < limit)
             {
                 break;
             }

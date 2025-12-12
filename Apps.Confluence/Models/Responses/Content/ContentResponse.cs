@@ -28,6 +28,10 @@ public class ContentResponse
 
     [Display("Space")]
     public SpaceResponse Space { get; set; } = new();
+
+    public List<Ancestor>? Ancestors { get; set; }
+
+    public string? ParentId => Ancestors?.LastOrDefault()?.Id;
 }
 
 public class BodyResponse
@@ -36,6 +40,10 @@ public class BodyResponse
     public ViewResponse View { get; set; } = new();
 }
 
+public class Ancestor
+{
+    public string Id { get; set; }
+}
 public class ViewResponse
 {
     [Display("HTML")]
