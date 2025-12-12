@@ -226,7 +226,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
 
     [BlueprintActionDefinition(BlueprintAction.UploadContent)]
     [Action("Create content from HTML", Description = "Create content from an HTML file.")]
-    public async Task<ContentResponse> CreateContentFromHtmlAsync(
+    public async Task<NewContentResponse> CreateContentFromHtmlAsync(
         [ActionParameter] CreateContentFromHtmlRequest request)
     {
         if (string.IsNullOrEmpty(request.ContentType))
@@ -289,7 +289,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             .WithJsonBody(bodyDictionary);
 
         var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
-        return contentResponse;
+        return new NewContentResponse {Id = contentResponse.Id }; 
        // return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 
