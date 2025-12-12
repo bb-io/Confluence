@@ -178,7 +178,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
         var endpoint = "/rest/api/content/search";
-        var cql = $"id={request.ContentId}";
+        var cql = $"contentId={request.ContentId}";
         var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString)
             .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString)
@@ -289,7 +289,8 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             .WithJsonBody(bodyDictionary);
 
         var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
-        return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
+        return contentResponse;
+       // return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 
     [Action("Update content from HTML", Description = "Updates a content from HTML file.")]
