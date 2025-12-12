@@ -10,9 +10,12 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Filters.Transformations;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
 using System.Text;
+using Blackbird.Filters.Xliff.Xliff2;
+using Blackbird.Filters.Xliff.Xliff1;
 
 namespace Apps.Confluence.Actions;
 
@@ -46,16 +49,10 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         {
             var createdDate = request.CreatedFrom.Value.ToUniversalTime();
             if (createdDate > DateTime.UtcNow)
-            {
                 throw new PluginMisconfigurationException($"CreatedFrom date ({createdDate}) cannot be in the future.");
-            }
+
             cqlParts.Add($"created>=\"{createdDate:yyyy-MM-dd}\"");
         }
-
-        //if (!string.IsNullOrEmpty(request.SpaceId))
-        //{
-        //    cqlParts.Add($"space = {request.SpaceId}");
-        //}
 
         if (!string.IsNullOrEmpty(request.ParentId))
         {
@@ -66,96 +63,66 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         {
             var updatedDate = request.UpdatedFrom.Value.ToUniversalTime();
             if (updatedDate > DateTime.UtcNow)
-            {
                 throw new PluginMisconfigurationException($"UpdatedFrom date ({updatedDate}) cannot be in the future.");
-            }
+
             cqlParts.Add($"lastModified>=\"{updatedDate:yyyy-MM-dd}\"");
         }
 
         if (!string.IsNullOrEmpty(request.CqlQuery))
         {
-            var trimmedCqlQuery = request.CqlQuery.Trim();
-            if (string.IsNullOrWhiteSpace(trimmedCqlQuery))
-            {
+            var trimmed = request.CqlQuery.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
                 throw new PluginMisconfigurationException("CQL query cannot be empty or whitespace.");
-            }
-            if (trimmedCqlQuery.Contains(";") || trimmedCqlQuery.Contains("--"))
-            {
+
+            if (trimmed.Contains(";") || trimmed.Contains("--"))
                 throw new PluginMisconfigurationException("CQL query contains invalid characters (e.g., ';' or '--').");
-            }
-            cqlParts.Add($"({trimmedCqlQuery})");
+
+            cqlParts.Add($"({trimmed})");
         }
 
-        var cql = cqlParts.Any() ? string.Join(" AND ", cqlParts) : "type IN (page,blogpost,comment)";
+        var cql = cqlParts.Any()
+            ? string.Join(" AND ", cqlParts)
+            : "type IN (page,blogpost,comment)";
 
         while (currentIteration < maxIterations)
         {
             currentIteration++;
 
-            var endpoint = "/rest/api/content/search";
-            var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
+            var apiRequest = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
                 .AddParameter("cql", cql, ParameterType.QueryString)
                 .AddParameter("start", start, ParameterType.QueryString)
                 .AddParameter("limit", limit, ParameterType.QueryString)
                 .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
-            
+
+            SearchContentResponse response;
+
             try
             {
-                var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
-
-                if (response == null)
-                {
-                    break;
-                }
-
-                if (response.Results != null && response.Results.Any())
-                {
-                    var filteredResults = string.IsNullOrEmpty(request.Status)
-                        ? response.Results
-                        : response.Results.Where(r => r.Status == request.Status).ToList();
-
-                    if (filteredResults.Any())
-                    {
-                        allResults.AddRange(filteredResults);
-                    }
-
-                    if (response.Results.Count < limit)
-                    {
-                        break;
-                    }
-
-                    var hasNextPage = false;
-                    if (response.Links != null)
-                    {
-                        hasNextPage = !string.IsNullOrEmpty(response.Links.Next);
-                    }
-
-                    if (!hasNextPage)
-                    {
-                        break;
-                    }
-
-                    var newStart = start + limit;
-                    if (newStart <= start)
-                    {
-                        break;
-                    }
-                    start = newStart;
-                }
-                else
-                {
-
-                    break;
-                }
-                if (response.Size.HasValue && start >= response.Size.Value)
-                {
-                    break;
-                }
+                response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
             }
-            catch (Exception ex)
+            catch
             {
                 break;
             }
+
+            if (response?.Results == null || response.Results.Count == 0)
+                break;
+
+            var filteredPageResults = string.IsNullOrEmpty(request.Status)
+                ? response.Results
+                : response.Results.Where(r => r.Status == request.Status).ToList();
+
+            allResults.AddRange(filteredPageResults);
+
+            var nextLink = response.Links?.Next;
+            if (string.IsNullOrEmpty(nextLink))
+                break;
+
+            var nextStart = ExtractStartFromNextLink(nextLink);
+            if (nextStart <= start)
+                break; 
+
+            start = nextStart;
         }
 
         if (!string.IsNullOrEmpty(request.SpaceId))
@@ -173,6 +140,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             Size = allResults.Count
         };
     }
+
 
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]
     public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
@@ -244,8 +212,16 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         await stream.CopyToAsync(memoryStream);
         memoryStream.Position = 0;
 
-        var htmlString = Encoding.UTF8.GetString(memoryStream.ToArray());
-        var htmlEntity = HtmlConverter.ExtractHtmlContent(htmlString);
+        var fileString = Encoding.UTF8.GetString(memoryStream.ToArray());
+
+        Transformation? transformation = null;
+        if (Xliff2Serializer.IsXliff2(fileString) || Xliff1Serializer.IsXliff1(fileString))
+        {
+            transformation = Transformation.Parse(fileString, request.File.Name);
+            fileString = transformation.Target().Serialize() ?? throw new PluginMisconfigurationException("XLIFF did not contain files");
+        }
+      
+        var htmlEntity = HtmlConverter.ExtractHtmlContent(fileString);
 
         var bodyDictionary = new Dictionary<string, object>
         {
@@ -434,5 +410,14 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
        
         var apiRequest = new ApiRequest(endpoint, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(apiRequest);
+    }
+    private int ExtractStartFromNextLink(string nextLink)
+    {
+        var uri = new Uri("https://dummy" + nextLink);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        return int.TryParse(query["start"], out var startValue)
+            ? startValue
+            : 0;
     }
 }
