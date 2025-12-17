@@ -39,6 +39,7 @@ public class BodyResponse
     [Display("View")]
     public ViewResponse View { get; set; } = new();
 
+    [DefinitionIgnore]
     [Display("Storage")]
     public ViewResponse Storage { get; set; } = new();
 }
