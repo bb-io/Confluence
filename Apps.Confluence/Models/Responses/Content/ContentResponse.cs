@@ -38,6 +38,9 @@ public class BodyResponse
 {
     [Display("View")]
     public ViewResponse View { get; set; } = new();
+
+    [Display("Storage")]
+    public ViewResponse Storage { get; set; } = new();
 }
 
 public class Ancestor

@@ -170,10 +170,10 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var cql = $"id={request.ContentId}";
         var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString)
-            .AddParameter("expand", "body.view", ParameterType.QueryString)
+            .AddParameter("expand", "body.storage,body.view", ParameterType.QueryString)
             .AddParameter("limit", 1, ParameterType.QueryString);
 
-        var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+       var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
 
         if (response.Results == null || !response.Results.Any())
         {
