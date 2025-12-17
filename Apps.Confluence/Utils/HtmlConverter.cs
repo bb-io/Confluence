@@ -23,7 +23,7 @@ public static class HtmlConverter
         htmlNode.AppendChild(headNode);
 
         var bodyNode = HtmlNode.CreateNode("<body></body>");
-        bodyNode.InnerHtml = content.Body.View.Value;
+        bodyNode.InnerHtml = content.Body.Storage.Value;
         htmlNode.AppendChild(bodyNode);
 
         return htmlDoc.DocumentNode.OuterHtml;

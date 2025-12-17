@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Confluence [Beta]</Product>
         <Description>Create, collaborate, and organize all your work in one place. Confluence is a team workspace where knowledge and collaboration meet. Dynamic pages give your team a place to create, capture, and collaborate on any project or idea.</Description>
-        <Version>1.0.10</Version>
+        <Version>1.0.11</Version>
         <PackageId>Apps.Confluence</PackageId>
         <RootNamespace>Apps.Confluence</RootNamespace>
         <AssemblyName>Apps.Confluence</AssemblyName>
@@ -16,7 +16,8 @@
 		<PackageReference Include="Blackbird.Applications.Sdk.Blueprints" Version="1.0.0-rc.10308" />
 		<PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.2-alpha2" />
         <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
-        <PackageReference Include="HtmlAgilityPack" Version="1.11.68" />
+        <PackageReference Include="Blackbird.Filters" Version="1.1.43" />
+        <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
     </ItemGroup>
 
     <ItemGroup>
