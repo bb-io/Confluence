@@ -24,25 +24,25 @@ public class ContentPropertyActions(InvocationContext invocationContext )
     : AppInvocable(invocationContext)
 {
 
-    [Action("Search content properties", Description = "Lists all content properties for a content ID")]
-    public async Task<ContentPropertyListResponse> SearchContentPropertiesAsync([ActionParameter] ContentIdentifier request)
-    {
-        var endpoint = $"/rest/api/content/{request.ContentId}/property";
+    //[Action("Search content properties", Description = "Lists all content properties for a content ID")]
+    //public async Task<ContentPropertyListResponse> SearchContentPropertiesAsync([ActionParameter] ContentIdentifier request)
+    //{
+    //    var endpoint = $"/rest/api/content/{request.ContentId}/property";
 
-        var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
+    //    var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
 
-        return await Client.ExecuteWithErrorHandling<ContentPropertyListResponse>(apiRequest);
-    }
+    //    return await Client.ExecuteWithErrorHandling<ContentPropertyListResponse>(apiRequest);
+    //}
 
-    [Action("Get content property", Description = "Gets a specific content property by key")]
-    public async Task<ContentPropertyResponse> GetContentPropertyAsync([ActionParameter] PropertyIdentifier request)
-    {
-        var endpoint = $"/rest/api/content/{request.ContentId}/property/{request.Key}";
+    //[Action("Get content property", Description = "Gets a specific content property by key")]
+    //public async Task<ContentPropertyResponse> GetContentPropertyAsync([ActionParameter] PropertyIdentifier request)
+    //{
+    //    var endpoint = $"/rest/api/content/{request.ContentId}/property/{request.Key}";
 
-        var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
+    //    var apiRequest = new ApiRequest(endpoint, Method.Get, Creds);
 
-        return await Client.ExecuteWithErrorHandling<ContentPropertyResponse>(apiRequest);
-    }
+    //    return await Client.ExecuteWithErrorHandling<ContentPropertyResponse>(apiRequest);
+    //}
 
     [Action("Set page property", Description = "Creates or updates a page property")]
     public async Task<ContentPropertyResponse> SetPagePropertyAsync([ActionParameter] SetPropertyRequest request)
