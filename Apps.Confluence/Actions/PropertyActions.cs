@@ -95,7 +95,7 @@ public class ContentPropertyActions(InvocationContext invocationContext )
 
     [Action("Search page properties", Description = "Returns page properties")]
     public async Task<ContentPropertyListResponse> SearchPagePropertiesAsync(
-    [ActionParameter] string contentId,
+    [ActionParameter] ContentIdentifier contentId,
     [ActionParameter][Display("Filter by key (exact match)")] string? key = null)
     {
         var allResults = new List<ContentPropertyResponse>();
@@ -105,7 +105,7 @@ public class ContentPropertyActions(InvocationContext invocationContext )
 
         while (true)
         {
-            var endpoint = $"/api/v2/pages/{contentId}/properties?limit={limit}&start={start}";
+            var endpoint = $"/api/v2/pages/{contentId.ContentId}/properties?limit={limit}&start={start}";
             var request = new ApiRequest(endpoint, Method.Get, Creds);
 
             var result = await Client.ExecuteWithErrorHandling<ContentPropertyListResponse>(request);
