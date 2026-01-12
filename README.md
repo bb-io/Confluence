@@ -35,6 +35,16 @@ You must ensure that you have a Confluence account and access to it. Our app use
 - **Create content** - Creates a new content with specified data.
 - **Delete content** - Deletes a content specified by the content ID.
 
+### Pages
+
+- **Download page** - Downloads a Confluence page as HTML file.
+
+### Page proeprties
+
+- **Search page properties** - Lists page properties.
+- **Get page property** - Gets a specific page property.
+- **Set page property** - Creates or updates a page property.
+
 ## Events
 
 - **On content created** - Polling event. Triggered after specified time interval and returns new content.
