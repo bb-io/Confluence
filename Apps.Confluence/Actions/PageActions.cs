@@ -21,7 +21,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
 {
     [Action(
     "Download page",
-    Description = "Downloads a Confluence page using the v2 API and storage format, exported as HTML file."
+    Description = "Downloads a Confluence page as HTML file."
 )]
     public async Task<GetContentAsHtmlResponse> DownloadPageStorageAsync(
     [ActionParameter] ContentIdentifier request)
