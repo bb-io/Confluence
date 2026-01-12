@@ -3,6 +3,7 @@ using Apps.Confluence.Invocables;
 using Apps.Confluence.Models.Identifiers;
 using Apps.Confluence.Models.Responses.Content;
 using Apps.Confluence.Models.Responses.Pages;
+using Apps.Confluence.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -18,9 +19,12 @@ namespace Apps.Confluence.Actions;
 public class PageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
     : AppInvocable(invocationContext)
 {
-    [Action("Download page (storage format)",
-    Description = "Downloads a Confluence page using the v2 API and storage format, exported as HTML file.")]
-    public async Task<GetContentAsHtmlResponse> DownloadPageStorageAsync([ActionParameter] ContentIdentifier request)
+    [Action(
+    "Download page",
+    Description = "Downloads a Confluence page using the v2 API and storage format, exported as HTML file."
+)]
+    public async Task<GetContentAsHtmlResponse> DownloadPageStorageAsync(
+    [ActionParameter] ContentIdentifier request)
     {
         var endpoint = $"/api/v2/pages/{request.ContentId}";
 
@@ -32,10 +36,16 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         if (response == null)
             throw new PluginApplicationException($"Page with ID {request.ContentId} not found.");
 
-        if (string.IsNullOrWhiteSpace(response.Body))
+        if (string.IsNullOrWhiteSpace(response.Body?.Storage?.Value))
             throw new PluginApplicationException($"Page {request.ContentId} does not contain body content.");
 
-        var html = response.Body;
+        var html = HtmlConverter.ConvertToHtml(new ContentResponse
+        {
+            Body = new BodyResponse { Storage = new ViewResponse { Value = response.Body.Storage.Value }},
+            Id = response.Id,
+            Title = response.Title
+        
+        });
 
         var fileStream = new MemoryStream(Encoding.UTF8.GetBytes(html));
         fileStream.Position = 0;
@@ -51,5 +61,6 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
             File = fileRef
         };
     }
+
 
 }
