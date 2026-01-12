@@ -37,7 +37,7 @@ You must ensure that you have a Confluence account and access to it. Our app use
 
 ### Pages
 
-- **Download page**
+- **Download page** - Downloads a Confluence page as HTML file.
 
 ### Page proeprties
 
