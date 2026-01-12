@@ -5,7 +5,7 @@ namespace Apps.Confluence.Models.Requests.Properties
 {
     public class SetPropertyRequest : PropertyIdentifier
     {
-        [Display("Property value (JSON)")]
+        [Display("Property value")]
         public string Value { get; set; }
     }
 }
