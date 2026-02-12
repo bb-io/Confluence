@@ -1,6 +1,7 @@
 ﻿using Apps.Confluence.Auth.OAuth2.Models;
 using Apps.Confluence.Constants;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json;
@@ -9,7 +10,7 @@ using RestSharp;
 namespace Apps.Confluence.Auth.OAuth2;
 
 public class OAuth2TokenService(InvocationContext invocationContext)
-    : BaseInvocable(invocationContext), IOAuth2TokenService
+    : BaseInvocable(invocationContext), IOAuth2TokenService, ITokenRefreshable
 {
     private const string TokenUrl = "https://auth.atlassian.com/oauth/token";
     
@@ -19,6 +20,21 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         var expiresIn = int.Parse(values[CredNames.ExpiresIn]);
         
         return createdAt + expiresIn < DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    }
+
+    public int? GetRefreshTokenExprireInMinutes(Dictionary<string, string> values)
+    {
+
+        if (!values.TryGetValue(CredNames.ExpiresIn, out var expiresIn))
+            return null;
+
+        if (!values.TryGetValue(CredNames.ExpiresIn, out var createdAt))
+            return null;
+
+
+        var difference = int.Parse(createdAt) + int.Parse(expiresIn) - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        return (int) difference - 300;
     }
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values,
