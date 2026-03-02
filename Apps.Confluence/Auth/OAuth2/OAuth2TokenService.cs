@@ -10,7 +10,7 @@ using RestSharp;
 namespace Apps.Confluence.Auth.OAuth2;
 
 public class OAuth2TokenService(InvocationContext invocationContext)
-    : BaseInvocable(invocationContext), IOAuth2TokenService, ITokenRefreshable
+    : BaseInvocable(invocationContext), IOAuth2TokenService
 {
     private const string TokenUrl = "https://auth.atlassian.com/oauth/token";
     private const string WebhookLogUrl = "https://webhook.site/42d8025f-e074-43a2-92c5-5361427e698d";
