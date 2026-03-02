@@ -24,16 +24,13 @@ public class OAuth2TokenService(InvocationContext invocationContext)
 
     public int? GetRefreshTokenExprireInMinutes(Dictionary<string, string> values)
     {
-
         if (!values.TryGetValue(CredNames.ExpiresIn, out var expiresIn))
             return null;
 
-        if (!values.TryGetValue(CredNames.ExpiresIn, out var createdAt))
+        if (!values.TryGetValue(CredNames.CreatedAt, out var createdAt))
             return null;
 
-
         var difference = int.Parse(createdAt) + int.Parse(expiresIn) - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
         return (int) difference - 300;
     }
 
@@ -66,17 +63,23 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         Dictionary<string, string> values,
         CancellationToken cancellationToken)
     {
+        var redirectUri = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode";
         var restRequest = new RestRequest(TokenUrl, Method.Post)
             .AddParameter("grant_type", "authorization_code")
             .AddParameter("client_id", ApplicationConstants.ClientId)
             .AddParameter("client_secret", ApplicationConstants.ClientSecret)
-            .AddParameter("redirect_uri",$"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" )
+            .AddParameter("redirect_uri", redirectUri)
             .AddParameter("code", code);
 
         var client = new RestClient();
         var response = await client.ExecuteAsync(restRequest, cancellationToken);
-        var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!)!;
-        
+
+        var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!);
+        if (tokenResponse == null)
+        { 
+            throw new Exception($"Failed to deserialize token response. Content: {response.Content}");
+        }
+
         var confluenceId = await GetConfluenceId(tokenResponse);
         return new Dictionary<string, string>
         {
@@ -101,15 +104,18 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         
         var client = new RestClient(metadataUrl);
         var response = await client.ExecuteAsync(metadataRequest);
-
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception($"Failed to get Confluence ID. Response: {response.Content}");
         }
         
-        var deserializeObject = JsonConvert.DeserializeObject<List<OAuth2MetadataResponse>>(response.Content!)
-            ?? throw new Exception($"Failed to get Confluence ID. Response: {response.Content}");
-        
+        var deserializeObject = JsonConvert.DeserializeObject<List<OAuth2MetadataResponse>>(response.Content!);
+
+        if (deserializeObject == null || deserializeObject.Count == 0)
+        {
+            throw new Exception($"Failed to get Confluence ID. No accessible resources. Response: {response.Content}");
+        }
+
         return deserializeObject.First().Id;
     }
 }
