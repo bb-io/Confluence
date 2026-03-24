@@ -1,6 +1,7 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace Tests.Confluence.Base;
 public class TestBase
@@ -23,5 +24,10 @@ public class TestBase
         };
 
         FileManager = new FileManager(folderLocation);
+    }
+
+    protected void PrintJsonResult(object result)
+    {
+        Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
     }
 }

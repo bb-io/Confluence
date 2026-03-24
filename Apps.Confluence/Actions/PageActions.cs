@@ -42,7 +42,7 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         var html = HtmlConverter.ConvertToHtml(new ContentResponse
         {
             Body = new BodyResponse { Storage = new ViewResponse { Value = response.Body.Storage.Value }},
-            Id = response.Id,
+            ContentId = response.Id,
             Title = response.Title
         
         });

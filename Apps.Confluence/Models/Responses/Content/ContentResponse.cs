@@ -1,12 +1,14 @@
 ﻿using Apps.Confluence.Models.Responses.Spaces;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
+using Newtonsoft.Json;
 
 namespace Apps.Confluence.Models.Responses.Content;
 
-public class ContentResponse
+public class ContentResponse : IDownloadContentInput
 {
-    [Display("Content ID")]
-    public string Id { get; set; } = string.Empty;
+    [Display("Content ID"), JsonProperty("id")]
+    public string ContentId { get; set; } = string.Empty;
     
     [Display("Content type")]
     public string Type { get; set; } = string.Empty;

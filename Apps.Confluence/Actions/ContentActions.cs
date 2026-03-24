@@ -265,7 +265,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
             .WithJsonBody(bodyDictionary);
 
         var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
-        return new NewContentResponse {Id = contentResponse.Id }; 
+        return new NewContentResponse {Id = contentResponse.ContentId }; 
        // return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
 

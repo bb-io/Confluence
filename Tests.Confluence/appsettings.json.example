@@ -1,6 +1,7 @@
 {
   "ConnectionDefinition": {
-    "api_key": ""
+    "accessToken": "",
+    "confluenceId": ""
   },
   "TestFolder": "C:\\Users\\..."
 }

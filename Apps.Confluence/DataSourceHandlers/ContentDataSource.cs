@@ -14,6 +14,6 @@ public class ContentDataSource(InvocationContext invocationContext) : AppInvocab
         
         return campaigns.Results
             .Where(x => context.SearchString == null || x.Title.Contains(context.SearchString))
-            .ToDictionary(x => x.Id, v => $"{ v.Title} ({v.Type})");
+            .ToDictionary(x => x.ContentId, v => $"{ v.Title} ({v.Type})");
     }
 }
