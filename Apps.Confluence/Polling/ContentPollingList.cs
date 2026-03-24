@@ -5,6 +5,7 @@ using Apps.Confluence.Models.Requests.Content;
 using Apps.Confluence.Models.Responses.Content;
 using Apps.Confluence.Polling.Models;
 using Apps.Confluence.Polling.Models.Requests;
+using Apps.Confluence.Polling.Models.Response;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using Blackbird.Applications.SDK.Blueprints;
@@ -18,7 +19,7 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
     [BlueprintEventDefinition(BlueprintEvent.ContentCreatedOrUpdatedMultiple)]
     [PollingEvent("On content created",
         "Polling event. Triggered after specified time interval and returns new content.")]
-    public async Task<PollingEventResponse<DateMemory, SearchContentResponse>> OnContentCreated(
+    public async Task<PollingEventResponse<DateMemory, OnContentCreatedResponse>> OnContentCreated(
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] FilterContentPollingRequest filterContentRequest)
     {
@@ -42,8 +43,8 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
 
         return new()
         {
-            FlyBird = content.Results.Any(),
-            Result = content,
+            FlyBird = content.Results.Count != 0,
+            Result = new(content),
             Memory = new()
             {
                 LastInteractionDate = DateTime.UtcNow

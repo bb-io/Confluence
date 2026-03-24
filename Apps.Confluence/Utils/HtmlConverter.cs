@@ -17,7 +17,7 @@ public static class HtmlConverter
         var titleNode = HtmlNode.CreateNode($"<title>{content.Title}</title>");
         headNode.AppendChild(titleNode);
         
-        var metaNode = HtmlNode.CreateNode($"<meta name=\"blackbird-content-id\" content=\"{content.Id}\" />");
+        var metaNode = HtmlNode.CreateNode($"<meta name=\"blackbird-content-id\" content=\"{content.ContentId}\" />");
         headNode.AppendChild(metaNode);
         
         htmlNode.AppendChild(headNode);
