@@ -10,18 +10,56 @@ Create, collaborate, and organize all your work in one place. Confluence is a te
 
 ## Before setting up
 
-You must ensure that you have a Confluence account and access to it. Our app uses OAuth 2.0 for authentication, so you don't need to provide any API keys. You will be redirected to the Confluence login page to authorize the app. Note, this app leverages the [Confluence Cloud REST API](https://developer.atlassian.com/cloud/confluence/rest/v1/intro/#about) to provide a streamlined experience for managing your content.
+You must ensure that you have a Confluence account and access to it. 
+During authentication, you will be redirected to the Confluence login page to authorize the app. 
+Note, this app leverages the [Confluence Cloud REST API](https://developer.atlassian.com/cloud/confluence/rest/v1/intro/#about) to provide a streamlined experience for managing your content.
+
+### Custom OAuth2 apps
+
+If you want to use your custom OAuth2 app to connect, you need to:
+
+- Go to [Atlassian Developer Console](https://developer.atlassian.com/console/myapps/).
+- Click _Create_ > _OAuth 2.0 Integration_.
+- Name your app for future reference, read and agree to be bound by Atlassian's developer terms and click _Create_.
+- Go to _Authorization_ and click _Add_ for the OAuth 2.0 (3LO) authorization type.
+- In the _Callback URLs_ field, specify `https://bridge.blackbird.io/api/AuthorizationCode` and click _Save changes_.
+- Go to _Permissions_, find _Confluence API_ and click _Add_.
+- Click _Configure_ and set the scopes you want to use. Currently, our app supports these scopes:
+  - Classic scopes tab: `write:confluence-content read:confluence-space.summary write:confluence-space
+  write:confluence-file write:confluence-props read:confluence-props manage:confluence-configuration read:confluence-content.all
+  read:confluence-content.summary search:confluence read:confluence-content.permission read:confluence-user
+  read:confluence-groups write:confluence-groups`.
+  - Granular scopes tab: `read:content:confluence write:content:confluence read:content-details:confluence
+  read:space-details:confluence delete:content:confluence read:page:confluence write:page:confluence delete:page:confluence
+  read:attachment:confluence read:custom-content:confluence write:custom-content:confluence delete:custom-content:confluence
+  write:comment:confluence delete:comment:confluence read:template:confluence write:template:confluence
+  read:space:confluence read:content.permission:confluence read:content.property:confluence write:content.property:confluence`. 
+  
+  If you don't need to configure your own scopes, simply copy and paste all the beforementioned ones.
+- Go to _Settings_ > _Authentication details_ and copy `Client ID` and `Secret` values.
 
 ## Connecting
 
-1. Navigate to Apps, and identify the **Confluence** app. You can use search to find it.
-2. Click _Add Connection_.
-3. Name your connection for future reference e.g. 'My organization'.
-4. Click _Authorize connection_.
-5. You will be redirected to the Confluence login page. Enter your credentials and authorize the app.
-6. Confirm that the connection has appeared and the status is _Connected_.
+Navigate to Apps search for **Confluence**. Click _Add Connection_ and name it for future reference e.g. 'My connection'.
 
-![Connection](image/README/connection.png)
+### OAuth2
+
+1. Select the _OAuth2_ connection type from the dropdown.
+2. Click _Authorize connection_.
+3. Follow the instructions that Confluence gives you.
+4. Confirm that the connection has appeared and the status is _Connected_.
+
+![OAuth2 connection](image/README/oauth2_conn.png)
+
+### OAuth2 (custom app)
+
+1. Select the _OAuth2 (custom app)_ connection type from the dropdown.
+2. Fill in _Client ID_, _Client secret_ and _Scopes_ that you obtained before.
+3. Click _Authorize connection_.
+4. Follow the instructions that Confluence gives you.
+5. Confirm that the connection has appeared and the status is _Connected_.
+
+![OAuth2 connection](image/README/oauth2custom_conn.png)
 
 ## Actions
 

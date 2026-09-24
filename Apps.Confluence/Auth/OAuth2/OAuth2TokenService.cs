@@ -1,5 +1,6 @@
 ﻿using Apps.Confluence.Auth.OAuth2.Models;
 using Apps.Confluence.Constants;
+using Apps.Confluence.Models.Utility;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
@@ -37,10 +38,11 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values,
         CancellationToken cancellationToken)
     {
+        var creds = OAuth2Credentials.Create(values);
         var restRequest = new RestRequest(TokenUrl, Method.Post)
             .AddParameter("grant_type", "refresh_token")
-            .AddParameter("client_id", ApplicationConstants.ClientId)
-            .AddParameter("client_secret", ApplicationConstants.ClientSecret)
+            .AddParameter("client_id", creds.ClientId)
+            .AddParameter("client_secret", creds.ClientSecret)
             .AddParameter("redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" )
             .AddParameter("refresh_token", values[CredNames.RefreshToken]);
         
@@ -63,11 +65,12 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         Dictionary<string, string> values,
         CancellationToken cancellationToken)
     {
+        var creds = OAuth2Credentials.Create(values);
         var redirectUri = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode";
         var restRequest = new RestRequest(TokenUrl, Method.Post)
             .AddParameter("grant_type", "authorization_code")
-            .AddParameter("client_id", ApplicationConstants.ClientId)
-            .AddParameter("client_secret", ApplicationConstants.ClientSecret)
+            .AddParameter("client_id", creds.ClientId)
+            .AddParameter("client_secret", creds.ClientSecret)
             .AddParameter("redirect_uri", redirectUri)
             .AddParameter("code", code);
 
