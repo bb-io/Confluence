@@ -34,7 +34,7 @@ public class ConnectionDefinition : IConnectionDefinition
         Dictionary<string, string> values)
     {
         var token = values.First(v => v.Key == CredNames.AccessToken);
-        yield return new AuthenticationCredentialsProvider("Authorization", $"Bearer {token.Value}");
+        yield return new AuthenticationCredentialsProvider(CredNames.AccessToken, $"Bearer {token.Value}");
             
         var connectionType = values[nameof(ConnectionPropertyGroup)] switch
         {
