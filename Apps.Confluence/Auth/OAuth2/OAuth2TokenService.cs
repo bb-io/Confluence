@@ -38,10 +38,11 @@ public class OAuth2TokenService(InvocationContext invocationContext)
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values,
         CancellationToken cancellationToken)
     {
+        var creds = OAuth2Credentials.Create(values);
         var restRequest = new RestRequest(TokenUrl, Method.Post)
             .AddParameter("grant_type", "refresh_token")
-            .AddParameter("client_id", ApplicationConstants.ClientId)
-            .AddParameter("client_secret", ApplicationConstants.ClientSecret)
+            .AddParameter("client_id", creds.ClientId)
+            .AddParameter("client_secret", creds.ClientSecret)
             .AddParameter("redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" )
             .AddParameter("refresh_token", values[CredNames.RefreshToken]);
         
