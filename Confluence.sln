@@ -8,7 +8,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution items", "Solution items", "{EE7CCC65-9841-49E1-886E-8637BAC36F4E}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
-		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.Confluence", "Tests.Confluence\Tests.Confluence.csproj", "{D541EE73-0430-4CDE-A498-0B0D69FA8339}"
