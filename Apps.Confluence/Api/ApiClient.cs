@@ -13,6 +13,8 @@ namespace Apps.Confluence.Api;
 public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialProviders)
     : BlackBirdRestClient(new RestClientOptions { BaseUrl = authenticationCredentialProviders.GetUrl(), ThrowOnAnyError = false })
 {
+    private const int MaxErrorContentExcerptLength = 500;
+
     private static readonly AsyncRetryPolicy<RestResponse> RetryPolicy =
         ConfluencePollyPolicies.GetTransientRetryPolicy();
 
@@ -84,11 +86,21 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
 
         if (string.IsNullOrWhiteSpace(errorMessage))
         {
-            errorMessage = !string.IsNullOrWhiteSpace(response.ErrorMessage)
-                ? response.ErrorMessage
-                : string.IsNullOrWhiteSpace(content)
-                    ? "Confluence returned an empty error response."
-                    : "Confluence returned a non-JSON or unsupported error response.";
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                errorMessage = !string.IsNullOrWhiteSpace(response.ErrorMessage)
+                    ? response.ErrorMessage
+                    : "Confluence returned an empty error response.";
+            }
+            else
+            {
+                var bodyMessage = "Confluence returned a non-JSON or unsupported error response. " +
+                    $"Response body: {GetContentExcerpt(content)}";
+
+                errorMessage = !string.IsNullOrWhiteSpace(response.ErrorMessage)
+                    ? $"{response.ErrorMessage}. {bodyMessage}"
+                    : bodyMessage;
+            }
         }
 
         var status = response.StatusCode == 0
@@ -96,5 +108,17 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
             : $"HTTP {(int)response.StatusCode} {response.StatusCode}";
 
         return new PluginApplicationException($"Confluence request failed. {status}. {errorMessage}");
+    }
+
+    private static string GetContentExcerpt(string content)
+    {
+        var excerptLength = Math.Min(content.Length, MaxErrorContentExcerptLength);
+        var excerpt = string.Concat(content
+            .Take(excerptLength)
+            .Select(character => char.IsControl(character) ? ' ' : character));
+
+        return content.Length > MaxErrorContentExcerptLength
+            ? $"{excerpt}..."
+            : excerpt;
     }
 }

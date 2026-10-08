@@ -30,6 +30,7 @@ public static class ConfluencePollyPolicies
     {
         return response.StatusCode is 0
             or HttpStatusCode.TooManyRequests
+            or HttpStatusCode.InternalServerError
             or HttpStatusCode.BadGateway
             or HttpStatusCode.ServiceUnavailable
             or HttpStatusCode.GatewayTimeout;
