@@ -4,6 +4,7 @@ using Apps.Confluence.Models.Utility;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json;
 using RestSharp;
@@ -46,9 +47,7 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             .AddParameter("redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" )
             .AddParameter("refresh_token", values[CredNames.RefreshToken]);
         
-        var client = new RestClient();
-        var response = await client.ExecuteAsync(restRequest, cancellationToken);
-        var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!)!;
+        var tokenResponse = await ExecuteTokenRequest(restRequest, cancellationToken);
         
         return new Dictionary<string, string>
         {
@@ -74,16 +73,9 @@ public class OAuth2TokenService(InvocationContext invocationContext)
             .AddParameter("redirect_uri", redirectUri)
             .AddParameter("code", code);
 
-        var client = new RestClient();
-        var response = await client.ExecuteAsync(restRequest, cancellationToken);
-
-        var tokenResponse = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content!);
-        if (tokenResponse == null)
-        { 
-            throw new Exception($"Failed to deserialize token response. Content: {response.Content}");
-        }
-
+        var tokenResponse = await ExecuteTokenRequest(restRequest, cancellationToken);
         var confluenceId = await GetConfluenceId(tokenResponse);
+        
         return new Dictionary<string, string>
         {
             { CredNames.AccessToken, tokenResponse.AccessToken },
@@ -120,5 +112,20 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         }
 
         return deserializeObject.First().Id;
+    }
+
+    private static async Task<OAuth2TokenResponse> ExecuteTokenRequest(RestRequest request, CancellationToken cancellationToken)
+    {
+        var client = new RestClient();
+        var response = await client.ExecuteAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw new PluginApplicationException(
+                $"Token request failed. Status code {(int)response.StatusCode} - {response.ErrorMessage} {response.Content}");
+        }
+
+        return JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content) ?? 
+               throw new PluginApplicationException($"Failed to deserialize token response. Content: {response.Content}");
     }
 }
