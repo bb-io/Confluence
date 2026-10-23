@@ -94,16 +94,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
                 .AddParameter("limit", limit, ParameterType.QueryString)
                 .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
-            SearchContentResponse response;
-
-            try
-            {
-                response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
-            }
-            catch
-            {
-                break;
-            }
+            var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
 
             if (response?.Results == null || response.Results.Count == 0)
                 break;
