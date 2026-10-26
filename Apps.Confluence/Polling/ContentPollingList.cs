@@ -75,7 +75,7 @@ public class ContentPollingList(InvocationContext invocationContext) : AppInvoca
 
         var apiRequest = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
             .AddParameter("cql", string.Join(" AND ", parts), ParameterType.QueryString)
-            .AddParameter("expand", "version,space,history,history.lastUpdated", ParameterType.QueryString);
+            .AddParameter("expand", CqlQueries.ContentListExpand, ParameterType.QueryString);
 
         var response = await Client.Paginate<ContentEntity>(apiRequest);
         var content = response

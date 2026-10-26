@@ -61,7 +61,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         string cql = cqlParts.Count != 0 ? string.Join(" AND ", cqlParts) : CqlQueries.EditableContentCql;
         var request = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString)
-            .AddParameter("expand", "ancestors,space,history,history.lastUpdated", ParameterType.QueryString);
+            .AddParameter("expand", CqlQueries.ContentListExpand, ParameterType.QueryString);
 
         var contentEntities = await Client.Paginate<ContentEntity>(request);
         contentEntities = contentEntities
