@@ -1,5 +1,7 @@
+using System.Web;
 using Apps.Confluence.Constants;
 using Apps.Confluence.Models.Dtos;
+using Apps.Confluence.Models.Responses.Utility;
 using Apps.Confluence.Utils;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -20,16 +22,27 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
 
     protected override JsonSerializerSettings JsonSettings => JsonConfig.JsonSettings;
 
-    public override async Task<T> ExecuteWithErrorHandling<T>(RestRequest request)
+    public async Task<List<T>> Paginate<T>(RestRequest request, int? maxPages = null)
     {
-        string content = (await ExecuteWithErrorHandling(request)).Content;
-        T val = JsonConvert.DeserializeObject<T>(content, JsonSettings);
-        if (val == null)
+        var allResults = new List<T>();
+        int pageSize = 100;
+        int pages = maxPages ?? 1000;
+
+        request.AddOrUpdateParameter("limit", pageSize, ParameterType.QueryString);
+        
+        for (var page = 0; page < pages; page++)
         {
-            throw new Exception($"Could not parse {content} to {typeof(T)}");
+            var response = await ExecuteWithErrorHandling<BasePaginationResponse<T>>(request);
+            allResults.AddRange(response.Results);
+
+            if (response.Results.Count == 0 || string.IsNullOrEmpty(response.Links?.Next))
+                break;
+            
+            if (!ApplyNextLink(request, response.Links.Next))
+                break;
         }
 
-        return val;
+        return allResults;
     }
 
     public override async Task<RestResponse> ExecuteWithErrorHandling(RestRequest request)
@@ -120,5 +133,18 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
         return content.Length > MaxErrorContentExcerptLength
             ? $"{excerpt}..."
             : excerpt;
+    }
+
+    private static bool ApplyNextLink(RestRequest request, string nextLink)
+    {
+        var queryStart = nextLink.IndexOf('?');
+        if (queryStart < 0)
+            return false;
+
+        var query = HttpUtility.ParseQueryString(nextLink[queryStart..]);
+        foreach (var key in query.AllKeys.OfType<string>())
+            request.AddOrUpdateParameter(key, query[key], ParameterType.QueryString);
+
+        return query.Count > 0;
     }
 }

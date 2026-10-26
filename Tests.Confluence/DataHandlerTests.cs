@@ -1,48 +1,42 @@
-﻿using Tests.Confluence.Base;
+﻿using Apps.Confluence.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common.Dynamic;
+using Tests.Confluence.Base;
 
-namespace Tests.Confluence
+namespace Tests.Confluence;
+
+[TestClass]
+public class DataHandlerTests : TestBase
 {
-    [TestClass]
-    public class DataHandlerTests : TestBase
+    [TestMethod]
+    public async Task SpaceDataSource_IsSuccess()
     {
-        [TestMethod]
-        public async Task SpaceDataSource_IsSuccess()
+        var handler = new SpaceDataSource(InvocationContext);
+        var context = new DataSourceContext
         {
-          var handler = new Apps.Confluence.DataSourceHandlers.SpaceDataSource(InvocationContext);
-            var context = new Blackbird.Applications.Sdk.Common.Dynamic.DataSourceContext
-            {
-                SearchString = ""
-            };
+            SearchString = ""
+        };
 
 
-            var result = await handler.GetDataAsync(context, CancellationToken.None);
+        var result = await handler.GetDataAsync(context, CancellationToken.None);
 
-            foreach (var space in result)
-            {
-                Console.WriteLine($"Space ID: {space.Key}, Name: {space.Value}");
-            }
-            Assert.IsNotNull(result);
-        }
-
-        [TestMethod]
-        public async Task ContentDataSource_IsSuccess()
+        foreach (var space in result)
         {
-            var handler = new Apps.Confluence.DataSourceHandlers.ContentDataSource(InvocationContext);
-            var context = new Blackbird.Applications.Sdk.Common.Dynamic.DataSourceContext
-            {
-                SearchString = ""
-            };
-
-
-            var result = await handler.GetDataAsync(context, CancellationToken.None);
-
-            foreach (var space in result)
-            {
-                Console.WriteLine($"Content ID: {space.Key}, Name: {space.Value}");
-            }
-            Assert.IsNotNull(result);
+            Console.WriteLine($"Space ID: {space.Key}, Name: {space.Value}");
         }
+        Assert.IsNotNull(result);
     }
 
+    [TestMethod]
+    public async Task ContentDataSource_ReturnsContent()
+    {
+        // Arrange
+        var handler = new ContentDataSource(InvocationContext);
+        var context = new DataSourceContext { SearchString = "" };
 
+        // Act
+        var result = await handler.GetDataAsync(context, CancellationToken.None);
+        
+        // Assert
+        PrintDataHandlerResult(result);
+    }
 }

@@ -1,135 +1,127 @@
 ﻿using Apps.Confluence.Actions;
 using Apps.Confluence.Models.Identifiers;
+using Apps.Confluence.Models.Requests.Content;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Tests.Confluence.Base;
 
-namespace Tests.Confluence
+namespace Tests.Confluence;
+
+[TestClass]
+public class ContentTests :TestBase
 {
-    [TestClass]
-    public class ContentTests :TestBase
+    [TestMethod]
+    public async Task SearchContentAsync_ReturnsResults()
     {
-
-        [TestMethod]
-        public async Task SearchContentAsync_ReturnsResults()
-        {          
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new Apps.Confluence.Models.Requests.Content.FilterContentRequest
-            {
-                //Status = "current",
-                //ContentType = "blogpost",
-                CreatedFrom = DateTime.UtcNow.AddDays(-130),
-                //UpdatedFrom = DateTime.UtcNow.AddDays(-2),
-                //CqlQuery = "type=blogpost"
-            };
-            var response = await contentActions.SearchContentAsync(request);
-
-            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
-            Console.WriteLine(json);
-
-            Assert.IsNotNull(response);
-        }
-
-        [TestMethod]
-        public async Task GetContentAsync_ReturnsResults()
+        // Arrange
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new FilterContentRequest
         {
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new ContentIdentifier
-            {
-                ContentId = "98411",
-            };
-            var response = await contentActions.GetContentAsync(request);
+            //SpaceId = "163844"
+        };
+        
+        // Act
+        var response = await contentActions.SearchContentAsync(request);
 
-            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
-            Console.WriteLine(json);
+        // Assert
+        PrintJsonResult(response);
+        Assert.IsNotNull(response);
+    }
 
-            Assert.IsNotNull(response);
-        }
-
-        [TestMethod]
-        public async Task GetContentHTMLAsync_ReturnsResults()
+    [TestMethod]
+    public async Task GetContentAsync_ReturnsResults()
+    {
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new ContentIdentifier
         {
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new ContentIdentifier
-            {
-                ContentId = "2296119692",
-            };
-            var response = await contentActions.GetContentAsHtmlAsync(request);
+            ContentId = "2296119692",
+        };
+        var response = await contentActions.GetContentAsync(request);
 
-            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
-            Console.WriteLine(json);
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
 
-            Assert.IsNotNull(response);
-        }
+        Assert.IsNotNull(response);
+    }
 
-        [TestMethod]
-        public async Task DeleteContent_ReturnsResults()
+    [TestMethod]
+    public async Task GetContentHTMLAsync_ReturnsResults()
+    {
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new ContentIdentifier
         {
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new ContentIdentifier
-            {
-                ContentId = "1441825",
-            };
-            await contentActions.DeleteContentAsync(request);
+            ContentId = "98406",
+        };
+        var response = await contentActions.GetContentAsHtmlAsync(request);
 
-            Assert.IsTrue(true);
-        }
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
 
-        [TestMethod]
-        public async Task CreateContent_ReturnsResults()
+        Assert.IsNotNull(response);
+    }
+
+    [TestMethod]
+    public async Task DeleteContent_ReturnsResults()
+    {
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new ContentIdentifier
         {
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new Apps.Confluence.Models.Requests.Content.CreateContentRequest
-            {
-                Type = "blogpost",
-                Title = "Test Page 3",
-                SpaceId = "65882",
-                Status = "current",
-                Body = "<p>This is a test page created via API.</p>"
-            };
-            var response = await contentActions.CreateContentAsync(request);
+            ContentId = "1441825",
+        };
+        await contentActions.DeleteContentAsync(request);
 
-            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
-            Console.WriteLine(json);
+        Assert.IsTrue(true);
+    }
 
-            Assert.IsNotNull(response);
-        }
-
-        [TestMethod]
-        public async Task CreateContentFromHtml_ReturnsResults()
+    [TestMethod]
+    public async Task CreateContent_ReturnsResults()
+    {
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new Apps.Confluence.Models.Requests.Content.CreateContentRequest
         {
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new Apps.Confluence.Models.Requests.Content.CreateContentFromHtmlRequest
-            {
-                File=new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "content-98411.html" },
-                SpaceId = "65882",
-                ContentType = "blogpost"
-                //1605647
-            };
-            var response = await contentActions.CreateContentFromHtmlAsync(request);
+            Type = "blogpost",
+            Title = "Test Page 3",
+            SpaceId = "65882",
+            Status = "current",
+            Body = "<p>This is a test page created via API.</p>"
+        };
+        var response = await contentActions.CreateContentAsync(request);
 
-            var json = JsonConvert.SerializeObject(response, Formatting.Indented);
-            Console.WriteLine(json);
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
 
-            Assert.IsNotNull(response);
-        }
+        Assert.IsNotNull(response);
+    }
 
-        [TestMethod]
-        public async Task UpdateContentFromHtml_ReturnsResults()
+    [TestMethod]
+    public async Task CreateContentFromHtml_ReturnsResults()
+    {
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new Apps.Confluence.Models.Requests.Content.CreateContentFromHtmlRequest
         {
-            var contentActions = new ContentActions(InvocationContext, FileManager);
-            var request = new Apps.Confluence.Models.Requests.Content.UpdateContentRequest
-            {
-                File = new Blackbird.Applications.Sdk.Common.Files.FileReference { Name = "content-98411.html" },
-                ContentId = "1048591"
-            };
-            await contentActions.UpdateContentFromHtml(request);
+            File=new Blackbird.Applications.Sdk.Common.Files.FileReference { Name= "content-98411.html" },
+            SpaceId = "65882",
+            ContentType = "blogpost"
+            //1605647
+        };
+        var response = await contentActions.CreateContentFromHtmlAsync(request);
 
-            Assert.IsTrue(true);
-        }
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
+
+        Assert.IsNotNull(response);
+    }
+
+    [TestMethod]
+    public async Task UpdateContentFromHtml_ReturnsResults()
+    {
+        var contentActions = new ContentActions(InvocationContext, FileManager);
+        var request = new Apps.Confluence.Models.Requests.Content.UpdateContentRequest
+        {
+            File = new Blackbird.Applications.Sdk.Common.Files.FileReference { Name = "content-98411.html" },
+            ContentId = "1048591"
+        };
+        await contentActions.UpdateContentFromHtml(request);
+
+        Assert.IsTrue(true);
     }
 }

@@ -11,6 +11,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
 using System.Text;
+using Apps.Confluence.Models.Entities.Content;
 
 namespace Apps.Confluence.Actions;
 
@@ -39,9 +40,9 @@ public class PageActions(InvocationContext invocationContext, IFileManagementCli
         if (string.IsNullOrWhiteSpace(response.Body?.Storage?.Value))
             throw new PluginApplicationException($"Page {request.ContentId} does not contain body content.");
 
-        var html = HtmlConverter.ConvertToHtml(new ContentResponse
+        var html = HtmlConverter.ConvertToHtml(new ContentEntity
         {
-            Body = new BodyResponse { Storage = new ViewResponse { Value = response.Body.Storage.Value }},
+            Body = new ContentBody { Storage = new ContentView { Value = response.Body.Storage.Value }},
             ContentId = response.Id,
             Title = response.Title
         

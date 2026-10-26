@@ -1,11 +1,12 @@
-﻿using Apps.Confluence.Models.Responses.Content;
+﻿using Apps.Confluence.Models.Entities.Content;
+using Apps.Confluence.Models.Responses.Content;
 using HtmlAgilityPack;
 
 namespace Apps.Confluence.Utils;
 
 public static class HtmlConverter
 {
-    public static string ConvertToHtml(ContentResponse content)
+    public static string ConvertToHtml(ContentEntity content)
     {
         var htmlDoc = new HtmlDocument();
 

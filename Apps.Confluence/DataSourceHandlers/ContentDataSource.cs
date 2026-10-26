@@ -1,19 +1,26 @@
-﻿using Apps.Confluence.Actions;
+﻿using Apps.Confluence.Api;
+using Apps.Confluence.Constants;
+using Apps.Confluence.Extensions;
 using Apps.Confluence.Invocables;
+using Apps.Confluence.Models.Entities.Content;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using RestSharp;
 
 namespace Apps.Confluence.DataSourceHandlers;
 
-public class ContentDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceHandler
+public class ContentDataSource(InvocationContext invocationContext) : AppInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context, CancellationToken cancellationToken)
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context, CancellationToken ct)
     {
-        var actions = new ContentActions(InvocationContext, null!);
-        var campaigns = await actions.SearchContentAsync(new());
+        string cql = CqlQueries.EditableContentCql;
+        if (!string.IsNullOrWhiteSpace(context.SearchString))
+            cql += $" AND title ~ {(context.SearchString + "*").ToCqlString()}";
         
-        return campaigns.Results
-            .Where(x => context.SearchString == null || x.Title.Contains(context.SearchString))
-            .ToDictionary(x => x.ContentId, v => $"{ v.Title} ({v.Type})");
+        var request = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
+            .AddParameter("cql", cql, ParameterType.QueryString);
+        
+        var response = await Client.Paginate<ContentEntity>(request, maxPages: 1);
+        return response.Select(x => new DataSourceItem(x.ContentId, $"{x.Title} ({x.Type})")).ToList();
     }
 }

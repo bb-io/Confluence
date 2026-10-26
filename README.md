@@ -85,8 +85,8 @@ Navigate to Apps search for **Confluence**. Click _Add Connection_ and name it f
 
 ## Events
 
-- **On content created** - Polling event. Triggered after specified time interval and returns new content.
-- **On content updated** - Polling event. Triggered after specified time interval and returns updated content.
+- **On content created** - Triggered when content is created or existing content is updated.
+- **On content updated** - Triggered when existing content is updated.
 
 ## Error handling
 
