@@ -46,7 +46,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         if (!string.IsNullOrEmpty(input.SpaceId))
         {
             string spaceKey = await Client.GetSpaceKey(Creds, input.SpaceId);
-            cqlParts.Add($"space = \"{spaceKey}\"");
+            cqlParts.Add($"space = {spaceKey.ToCqlString()}");
         }
 
         if (input.UpdatedFrom.HasValue)
