@@ -1,5 +1,6 @@
 using Apps.Confluence.Constants;
 using Apps.Confluence.Models.Dtos;
+using Apps.Confluence.Models.Responses.Utility;
 using Apps.Confluence.Utils;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -20,16 +21,36 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
 
     protected override JsonSerializerSettings JsonSettings => JsonConfig.JsonSettings;
 
-    public override async Task<T> ExecuteWithErrorHandling<T>(RestRequest request)
+    public async Task<List<T>> Paginate<T>(RestRequest request, int? maxPages = null)
     {
-        string content = (await ExecuteWithErrorHandling(request)).Content;
-        T val = JsonConvert.DeserializeObject<T>(content, JsonSettings);
-        if (val == null)
+        var allResults = new List<T>();
+        var start = 0;
+        int pageSize = 100;
+        int pages = maxPages ?? 1000;
+
+        for (var page = 0; page < pages; page++)
         {
-            throw new Exception($"Could not parse {content} to {typeof(T)}");
+            request
+                .AddOrUpdateParameter("start", start, ParameterType.QueryString)
+                .AddOrUpdateParameter("limit", pageSize, ParameterType.QueryString);
+
+            var response = await ExecuteWithErrorHandling<BasePaginationResponse<T>>(request);
+            if (response.Results.Count == 0)
+                break;
+
+            allResults.AddRange(response.Results);
+
+            if (string.IsNullOrEmpty(response.Links?.Next))
+                break;
+
+            var nextStart = ExtractStartFromNextLink(response.Links.Next);
+            if (nextStart <= start)
+                break;
+
+            start = nextStart;
         }
 
-        return val;
+        return allResults;
     }
 
     public override async Task<RestResponse> ExecuteWithErrorHandling(RestRequest request)
@@ -120,5 +141,15 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
         return content.Length > MaxErrorContentExcerptLength
             ? $"{excerpt}..."
             : excerpt;
+    }
+    
+    private static int ExtractStartFromNextLink(string nextLink)
+    {
+        var uri = new Uri("https://dummy" + nextLink);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        return int.TryParse(query["start"], out var startValue)
+            ? startValue
+            : 0;
     }
 }

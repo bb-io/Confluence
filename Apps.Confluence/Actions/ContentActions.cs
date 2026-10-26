@@ -14,6 +14,9 @@ using Blackbird.Filters.Transformations;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
 using System.Text;
+using Apps.Confluence.Constants;
+using Apps.Confluence.Extensions;
+using Apps.Confluence.Models.Entities.Content;
 using Blackbird.Filters.Xliff.Xliff2;
 using Blackbird.Filters.Xliff.Xliff1;
 
@@ -25,132 +28,65 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
 {
     [BlueprintActionDefinition(BlueprintAction.SearchContent)]
     [Action("Search content", Description = "Returns a list of content that matches the search criteria.")]
-    public async Task<SearchContentResponse> SearchContentAsync([ActionParameter] FilterContentRequest request)
+    public async Task<SearchContentResponse> SearchContentAsync([ActionParameter] FilterContentRequest input)
     {
-        var allResults = new List<ContentResponse>();
-        var start = 0;
-        var limit = 100;
-        var maxIterations = 1000;
-        var currentIteration = 0;
+        input.Validate();
 
-        var validContentTypes = new HashSet<string> { "page", "blogpost", "comment", "attachment" };
         var cqlParts = new List<string>();
 
-        if (!string.IsNullOrEmpty(request.ContentType))
+        if (!string.IsNullOrEmpty(input.ContentType))
+            cqlParts.Add($"type={input.ContentType.ToLower()}");
+
+        if (input.CreatedFrom.HasValue)
+            cqlParts.Add($"created>=\"{input.CreatedFrom.Value.ToUniversalTime().AddDays(-1):yyyy-MM-dd}\"");
+
+        if (!string.IsNullOrEmpty(input.ParentId))
+            cqlParts.Add($"parent = {input.ParentId}");
+
+        if (!string.IsNullOrEmpty(input.SpaceId))
         {
-            if (!validContentTypes.Contains(request.ContentType.ToLower()))
-            {
-                throw new PluginMisconfigurationException($"Invalid content type: {request.ContentType}. Valid types are: {string.Join(", ", validContentTypes)}");
-            }
-            cqlParts.Add($"type={request.ContentType.ToLower()}");
+            string spaceKey = await Client.GetSpaceKey(Creds, input.SpaceId);
+            cqlParts.Add($"space = \"{spaceKey}\"");
         }
 
-        if (request.CreatedFrom.HasValue)
+        if (input.UpdatedFrom.HasValue)
+            cqlParts.Add($"lastModified>=\"{input.UpdatedFrom.Value.ToUniversalTime().AddDays(-1):yyyy-MM-dd}\"");
+
+        if (!string.IsNullOrEmpty(input.CqlQuery))
         {
-            var createdDate = request.CreatedFrom.Value.ToUniversalTime();
-            if (createdDate > DateTime.UtcNow)
-                throw new PluginMisconfigurationException($"CreatedFrom date ({createdDate}) cannot be in the future.");
-
-            cqlParts.Add($"created>=\"{createdDate:yyyy-MM-dd}\"");
-        }
-
-        if (!string.IsNullOrEmpty(request.ParentId))
-        {
-            cqlParts.Add($"parent = {request.ParentId}");
-        }
-
-        if (request.UpdatedFrom.HasValue)
-        {
-            var updatedDate = request.UpdatedFrom.Value.ToUniversalTime();
-            if (updatedDate > DateTime.UtcNow)
-                throw new PluginMisconfigurationException($"UpdatedFrom date ({updatedDate}) cannot be in the future.");
-
-            cqlParts.Add($"lastModified>=\"{updatedDate:yyyy-MM-dd}\"");
-        }
-
-        if (!string.IsNullOrEmpty(request.CqlQuery))
-        {
-            var trimmed = request.CqlQuery.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed))
-                throw new PluginMisconfigurationException("CQL query cannot be empty or whitespace.");
-
-            if (trimmed.Contains(";") || trimmed.Contains("--"))
-                throw new PluginMisconfigurationException("CQL query contains invalid characters (e.g., ';' or '--').");
-
+            var trimmed = input.CqlQuery.Trim();
             cqlParts.Add($"({trimmed})");
         }
 
-        var cql = cqlParts.Any()
-            ? string.Join(" AND ", cqlParts)
-            : "type IN (page,blogpost,comment)";
+        string cql = cqlParts.Count != 0 ? string.Join(" AND ", cqlParts) : CqlQueries.EditableContentCql;
+        var request = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
+            .AddParameter("cql", cql, ParameterType.QueryString)
+            .AddParameter("expand", "ancestors,space,history,history.lastUpdated", ParameterType.QueryString);
 
-        while (currentIteration < maxIterations)
-        {
-            currentIteration++;
+        var contentEntities = await Client.Paginate<ContentEntity>(request);
+        contentEntities = contentEntities
+            .Where(x => string.IsNullOrEmpty(input.Status) || x.Status == input.Status)
+            .Where(x => !input.CreatedFrom.HasValue || x.History?.CreatedDate.ToUniversalTime() >= input.CreatedFrom.Value.ToUniversalTime())
+            .Where(x => !input.UpdatedFrom.HasValue || x.History?.LastUpdated.When.ToUniversalTime() >= input.UpdatedFrom.Value.ToUniversalTime())
+            .ToList();
 
-            var apiRequest = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
-                .AddParameter("cql", cql, ParameterType.QueryString)
-                .AddParameter("start", start, ParameterType.QueryString)
-                .AddParameter("limit", limit, ParameterType.QueryString)
-                .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
-
-            var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
-
-            if (response?.Results == null || response.Results.Count == 0)
-                break;
-
-            var filteredPageResults = string.IsNullOrEmpty(request.Status)
-                ? response.Results
-                : response.Results.Where(r => r.Status == request.Status).ToList();
-
-            allResults.AddRange(filteredPageResults);
-
-            var nextLink = response.Links?.Next;
-            if (string.IsNullOrEmpty(nextLink))
-                break;
-
-            var nextStart = ExtractStartFromNextLink(nextLink);
-            if (nextStart <= start)
-                break; 
-
-            start = nextStart;
-        }
-
-        if (!string.IsNullOrEmpty(request.SpaceId))
-        {
-            allResults = allResults
-                .Where(r => r.Space?.Id == request.SpaceId)
-                .ToList();
-        }
-
-        return new SearchContentResponse
-        {
-            Results = allResults,
-            Start = 0,
-            Limit = allResults.Count,
-            Size = allResults.Count
-        };
+        return new(contentEntities.Select(x => new ContentResponse(x)).ToList());
     }
-
-
+    
     [Action("Get content", Description = "Returns a single content object specified by the content ID.")]
-    public async Task<ContentResponse> GetContentAsync([ActionParameter] ContentIdentifier request)
+    public async Task<ContentEntity> GetContentAsync([ActionParameter] ContentIdentifier request)
     {
         var endpoint = "/rest/api/content/search";
         var cql = $"id={request.ContentId}";
         var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString)
-            .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString)
-            .AddParameter("limit", 1, ParameterType.QueryString);
+            .AddParameter("expand", "ancestors,body.view,version,space,history,history.lastUpdated", ParameterType.QueryString);
 
-        var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
+        var response = await Client.Paginate<ContentEntity>(apiRequest, maxPages: 1);
+        if (response.Count == 0)
+            throw new PluginMisconfigurationException($"Content with ID {request.ContentId} not found.");
 
-        if (response.Results == null || !response.Results.Any())
-        {
-            throw new PluginApplicationException($"Content with ID {request.ContentId} not found.");
-        }
-
-        return response.Results.First();
+        return response.First();
     }
 
     [BlueprintActionDefinition(BlueprintAction.DownloadContent)]
@@ -161,17 +97,13 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var cql = $"id={request.ContentId}";
         var apiRequest = new ApiRequest(endpoint, Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString)
-            .AddParameter("expand", "body.storage,body.view", ParameterType.QueryString)
-            .AddParameter("limit", 1, ParameterType.QueryString);
+            .AddParameter("expand", "body.storage,body.view", ParameterType.QueryString);
+        
+        var response = await Client.Paginate<ContentEntity>(apiRequest, maxPages: 1);
+        if (response.Count == 0)
+            throw new PluginMisconfigurationException($"Content with ID {request.ContentId} not found.");
 
-       var response = await Client.ExecuteWithErrorHandling<SearchContentResponse>(apiRequest);
-
-        if (response.Results == null || !response.Results.Any())
-        {
-            throw new PluginApplicationException($"Content with ID {request.ContentId} not found.");
-        }
-
-        var content = response.Results.First();
+        var content = response.First();
         var html = HtmlConverter.ConvertToHtml(content);
         var fileMemoryStream = new MemoryStream(Encoding.UTF8.GetBytes(html));
         fileMemoryStream.Position = 0;
@@ -255,7 +187,7 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
         var apiRequest = new ApiRequest(endpoint, Method.Post, Creds)
             .WithJsonBody(bodyDictionary);
 
-        var contentResponse = await Client.ExecuteWithErrorHandling<ContentResponse>(apiRequest);
+        var contentResponse = await Client.ExecuteWithErrorHandling<ContentEntity>(apiRequest);
         return new NewContentResponse {Id = contentResponse.ContentId }; 
        // return await GetContentAsync(new ContentIdentifier { ContentId = contentResponse.Id });
     }
@@ -401,14 +333,5 @@ public class ContentActions(InvocationContext invocationContext, IFileManagement
        
         var apiRequest = new ApiRequest(endpoint, Method.Delete, Creds);
         await Client.ExecuteWithErrorHandling(apiRequest);
-    }
-    private int ExtractStartFromNextLink(string nextLink)
-    {
-        var uri = new Uri("https://dummy" + nextLink);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-
-        return int.TryParse(query["start"], out var startValue)
-            ? startValue
-            : 0;
     }
 }
