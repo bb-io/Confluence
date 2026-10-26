@@ -9,15 +9,13 @@ namespace Tests.Confluence;
 [TestClass]
 public class ContentPollingTests : TestBase
 {
-    private readonly ContentPollingList _polling;
-
-    public ContentPollingTests() => _polling = new ContentPollingList(InvocationContext);
+    private ContentPollingList Polling => new(InvocationContext);
 
     [TestMethod]
     public async Task OnContentCreated_ReturnsCreatedContent()
     {
         // Arrange
-        var memory = new DateMemory { LastInteractionDate = DateTime.UtcNow - TimeSpan.FromDays(1) };
+        var memory = new DateMemory { LastInteractionDate = DateTime.UtcNow - TimeSpan.FromHours(10) };
         var pollingRequest = new PollingEventRequest<DateMemory> { Memory = memory };
         var filter = new FilterContentPollingRequest 
         { 
@@ -25,10 +23,29 @@ public class ContentPollingTests : TestBase
         };
 
         // Act
-        var result = await _polling.OnContentCreated(pollingRequest, filter);
+        var result = await Polling.OnContentCreated(pollingRequest, filter);
 
         // Assert
-        PrintJsonResult(result);
+        PrintJsonResult(result.Result ?? []);
+        Assert.IsNotNull(result);
+    }
+    
+    [TestMethod]
+    public async Task OnContentUpdated_ReturnsUpdatedContent()
+    {
+        // Arrange
+        var memory = new DateMemory { LastInteractionDate = DateTime.UtcNow - TimeSpan.FromMinutes(10) };
+        var pollingRequest = new PollingEventRequest<DateMemory> { Memory = memory };
+        var filter = new FilterContentPollingRequest 
+        { 
+            ContentType = "page"
+        };
+
+        // Act
+        var result = await Polling.OnContentUpdated(pollingRequest, filter);
+
+        // Assert
+        PrintJsonResult(result.Result ?? []);
         Assert.IsNotNull(result);
     }
 }
