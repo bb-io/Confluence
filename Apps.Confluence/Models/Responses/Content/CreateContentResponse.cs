@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Apps.Confluence.Models.Entities.Content;
 
 namespace Apps.Confluence.Models.Responses.Content
 {
@@ -44,10 +45,10 @@ namespace Apps.Confluence.Models.Responses.Content
         public DateTime CreatedAt { get; set; }
 
         [Display("Body")]
-        public BodyResponse Body { get; set; } = new();
+        public ContentBody Body { get; set; } = new();
 
         [DefinitionIgnore]
-        public VersionResponse Version { get; set; } = new();
+        public ContentVersion Version { get; set; } = new();
 
         [JsonProperty("_links")]
         [DefinitionIgnore]

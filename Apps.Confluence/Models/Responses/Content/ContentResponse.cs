@@ -1,78 +1,33 @@
-﻿using Apps.Confluence.Models.Responses.Spaces;
-using Blackbird.Applications.Sdk.Common;
+using Apps.Confluence.Models.Entities.Content;
+using Apps.Confluence.Models.Responses.Spaces;
 using Blackbird.Applications.SDK.Blueprints.Interfaces.CMS;
-using Newtonsoft.Json;
+using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Confluence.Models.Responses.Content;
 
-public class ContentResponse : IDownloadContentInput
+public class ContentResponse(ContentEntity contentEntity) : IDownloadContentInput
 {
-    [Display("Content ID"), JsonProperty("id")]
-    public string ContentId { get; set; } = string.Empty;
-    
-    [Display("Content type")]
-    public string Type { get; set; } = string.Empty;
-    
-    [Display("Status")]
-    public string Status { get; set; } = string.Empty;
-    
-    [Display("Title")]
-    public string Title { get; set; } = string.Empty;
+    [Display("Content ID")]
+    public string ContentId { get; set; } = contentEntity.ContentId;
 
-    [Display("Body")] 
-    public BodyResponse Body { get; set; } = new();
-    
-    [DefinitionIgnore]
-    public VersionResponse Version { get; set; } = new();
-    
-    [DefinitionIgnore] 
-    public HistoryResponse? History { get; set; }
+    [Display("Content type")]
+    public string Type { get; set; } = contentEntity.Type;
+
+    [Display("Status")]
+    public string Status { get; set; } = contentEntity.Status;
+
+    [Display("Title")]
+    public string Title { get; set; } = contentEntity.Title;
 
     [Display("Space")]
-    public SpaceResponse Space { get; set; } = new();
-
-    public List<Ancestor>? Ancestors { get; set; }
-
-    public string? ParentId => Ancestors?.LastOrDefault()?.Id;
-}
-
-public class BodyResponse
-{
-    [Display("View")]
-    public ViewResponse View { get; set; } = new();
-
-    [DefinitionIgnore]
-    [Display("Storage")]
-    public ViewResponse Storage { get; set; } = new();
-}
-
-public class Ancestor
-{
-    public string Id { get; set; }
-}
-public class ViewResponse
-{
-    [Display("HTML")]
-    public string Value { get; set; } = string.Empty;
+    public SpaceResponse Space { get; set; } = new(contentEntity.Space);
     
-    [Display("Representation")]
-    public string Representation { get; set; } = string.Empty;
-}
+    [Display("Parent ID")]
+    public string? ParentId { get; set; } = contentEntity.ParentId;
 
-public class VersionResponse
-{
-    [Display("Number")]
-    public int Number { get; set; }
-}
+    [Display("Created at")]
+    public DateTime? CreatedAt { get; set; } = contentEntity.History?.CreatedDate;
 
-public class HistoryResponse
-{
-    public DateTime CreatedDate { get; set; }
-
-    public LastUpdatedResponse LastUpdated { get; set; } = new();
-}
-
-public class LastUpdatedResponse
-{
-    public DateTime When { get; set; }
+    [Display("Updated at")]
+    public DateTime? UpdatedAt { get; set; } = contentEntity.History?.LastUpdated.When;
 }
