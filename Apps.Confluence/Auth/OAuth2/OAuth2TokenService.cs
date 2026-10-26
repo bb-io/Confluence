@@ -125,7 +125,15 @@ public class OAuth2TokenService(InvocationContext invocationContext)
                 $"Token request failed. Status code {(int)response.StatusCode} - {response.ErrorMessage} {response.Content}");
         }
 
-        return JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content) ?? 
-               throw new PluginApplicationException($"Failed to deserialize token response. Content: {response.Content}");
+        try
+        {
+            var deserialized = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content);
+            return deserialized ?? 
+                   throw new PluginApplicationException($"Deserialized response was empty. Raw: {response.Content}");
+        }
+        catch (JsonException)
+        {
+            throw new PluginApplicationException($"Failed to deserialize token response. Content: {response.Content}");
+        }
     }
 }
