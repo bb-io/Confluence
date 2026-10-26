@@ -128,6 +128,9 @@ public class OAuth2TokenService(InvocationContext invocationContext)
         try
         {
             var deserialized = JsonConvert.DeserializeObject<OAuth2TokenResponse>(response.Content);
+            if (string.IsNullOrWhiteSpace(deserialized?.AccessToken) || string.IsNullOrWhiteSpace(deserialized?.RefreshToken))
+                throw new PluginApplicationException($"Access or refresh token response was empty. Raw: {response.Content}");
+            
             return deserialized ?? 
                    throw new PluginApplicationException($"Deserialized response was empty. Raw: {response.Content}");
         }
