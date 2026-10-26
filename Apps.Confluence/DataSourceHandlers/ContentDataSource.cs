@@ -15,7 +15,7 @@ public class ContentDataSource(InvocationContext invocationContext) : AppInvocab
     {
         string cql = CqlQueries.EditableContentCql;
         if (!string.IsNullOrWhiteSpace(context.SearchString))
-            cql += $" AND title ~ {context.SearchString.ToCqlString() + "*"}";
+            cql += $" AND title ~ {(context.SearchString + "*").ToCqlString()}";
         
         var request = new ApiRequest("/rest/api/content/search", Method.Get, Creds)
             .AddParameter("cql", cql, ParameterType.QueryString);
