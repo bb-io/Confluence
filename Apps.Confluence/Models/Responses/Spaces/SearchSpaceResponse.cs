@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.Confluence.Models.Responses.Utility;
+using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.Confluence.Models.Responses.Spaces;
 
