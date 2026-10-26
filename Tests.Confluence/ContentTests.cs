@@ -16,7 +16,7 @@ public class ContentTests :TestBase
         var contentActions = new ContentActions(InvocationContext, FileManager);
         var request = new FilterContentRequest
         {
-            SpaceId = "163844"
+            //SpaceId = "163844"
         };
         
         // Act
