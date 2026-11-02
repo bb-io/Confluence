@@ -1,3 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Text.RegularExpressions;
 using System.Web;
 using Apps.Confluence.Constants;
 using Apps.Confluence.Models.Dtos;
@@ -16,6 +19,11 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
     : BlackBirdRestClient(new RestClientOptions { BaseUrl = authenticationCredentialProviders.GetUrl(), ThrowOnAnyError = false })
 {
     private const int MaxErrorContentExcerptLength = 500;
+
+    private const string ForbiddenAccessHint =
+        "Check the connected account's permissions, data security policies and connection scopes.";
+
+    private static readonly Regex JavaExceptionNamePrefix = new(@"^.*Exception:\s*", RegexOptions.Compiled);
 
     private static readonly AsyncRetryPolicy<RestResponse> RetryPolicy =
         ConfluencePollyPolicies.GetTransientRetryPolicy();
@@ -62,37 +70,26 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
     protected override Exception ConfigureErrorException(RestResponse response)
     {
         var content = response.Content?.Trim();
+
+        if (response.StatusCode == HttpStatusCode.Forbidden)
+            return CreateForbiddenException(content);
+
         string? errorMessage = null;
 
-        if (!string.IsNullOrEmpty(content) &&
-            (content.StartsWith('{') || content.StartsWith('[')))
+        if (IsJson(content))
         {
-            try
+            var errors = DeserializeOrDefault<ErrorResponse>(content);
+            if (errors?.Errors?.Count > 0)
             {
-                var errors = JsonConvert.DeserializeObject<ErrorResponse>(content, JsonSettings);
-                if (errors?.Errors?.Count > 0)
-                {
-                    errorMessage = string.Join(" | ", errors.Errors.Select(error => error.ToString()));
-                }
-            }
-            catch (JsonException)
-            {
-                // The response may use another Confluence error schema.
+                errorMessage = string.Join(" | ", errors.Errors.Select(error => error.ToString()));
             }
 
             if (string.IsNullOrWhiteSpace(errorMessage))
             {
-                try
+                var error = DeserializeOrDefault<ErrorDto>(content);
+                if (!string.IsNullOrWhiteSpace(error?.Message))
                 {
-                    var error = JsonConvert.DeserializeObject<ErrorDto>(content, JsonSettings);
-                    if (!string.IsNullOrWhiteSpace(error?.Message))
-                    {
-                        errorMessage = error.ToString();
-                    }
-                }
-                catch (JsonException)
-                {
-                    // Fall back to a generic message below.
+                    errorMessage = error.ToString();
                 }
             }
         }
@@ -121,6 +118,45 @@ public class ApiClient(IEnumerable<AuthenticationCredentialsProvider> authentica
             : $"HTTP {(int)response.StatusCode} {response.StatusCode}";
 
         return new PluginApplicationException($"Confluence request failed. {status}. {errorMessage}");
+    }
+
+    private PluginMisconfigurationException CreateForbiddenException(string? content)
+    {
+        var reason = GetForbiddenReason(content);
+        var reasonSentence = string.IsNullOrWhiteSpace(reason) ? string.Empty : $"{reason.TrimEnd('.', ' ')}. ";
+
+        return new PluginMisconfigurationException(
+            $"Confluence denied access (HTTP 403 Forbidden). {reasonSentence}{ForbiddenAccessHint}");
+    }
+
+    private string? GetForbiddenReason(string? content)
+    {
+        if (!IsJson(content))
+            return null;
+
+        var legacyMessage = DeserializeOrDefault<ErrorDto>(content)?.Message;
+        if (!string.IsNullOrWhiteSpace(legacyMessage))
+            return JavaExceptionNamePrefix.Replace(legacyMessage, string.Empty).Trim();
+
+        var apiError = DeserializeOrDefault<ErrorResponse>(content)?.Errors?.FirstOrDefault();
+        return apiError?.Detail ?? apiError?.Title;
+    }
+
+    private static bool IsJson([NotNullWhen(true)] string? content)
+    {
+        return !string.IsNullOrEmpty(content) && (content.StartsWith('{') || content.StartsWith('['));
+    }
+
+    private T? DeserializeOrDefault<T>(string content) where T : class
+    {
+        try
+        {
+            return JsonConvert.DeserializeObject<T>(content, JsonSettings);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static string GetContentExcerpt(string content)
