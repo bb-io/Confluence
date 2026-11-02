@@ -48,6 +48,47 @@ public class ApiClientTests
     }
 
     [TestMethod]
+    public void ConfigureErrorException_ForbiddenSearchResponse_ReturnsMisconfigurationExceptionWithAccessHint()
+    {
+        var response = CreateResponse(
+            HttpStatusCode.Forbidden,
+            """{"statusCode":403,"message":"com.atlassian.confluence.api.service.exceptions.scale.SSStatusCodeException: CQL was parsed but the search manager was unable to execute the search. Error message: com.atlassian.confluence.api.service.exceptions.scale.SSStatusCodeException: There was an illegal request passed to XP-Search Aggregator API : HTTP/1.1 403 Forbidden"}""");
+
+        var exception = _client.GetErrorException(response);
+
+        Assert.IsInstanceOfType<PluginMisconfigurationException>(exception);
+        Assert.AreEqual(
+            "Confluence denied access (HTTP 403 Forbidden). There was an illegal request passed to XP-Search Aggregator API : HTTP/1.1 403 Forbidden. " +
+            "Check the connected account's permissions, data security policies and connection scopes.",
+            exception.Message);
+    }
+
+    [TestMethod]
+    public void ConfigureErrorException_ForbiddenPermissionResponse_KeepsOnlyConfluenceReason()
+    {
+        var response = CreateResponse(
+            HttpStatusCode.Forbidden,
+            """{"statusCode":403,"message":"com.atlassian.confluence.api.service.exceptions.api.PermissionException: User does not have Page view permission"}""");
+
+        var exception = _client.GetErrorException(response);
+
+        Assert.IsInstanceOfType<PluginMisconfigurationException>(exception);
+        StringAssert.StartsWith(exception.Message, "Confluence denied access (HTTP 403 Forbidden). User does not have Page view permission. ");
+        Assert.IsFalse(exception.Message.Contains("com.atlassian"));
+    }
+
+    [TestMethod]
+    public void ConfigureErrorException_ForbiddenWithoutBody_ReturnsMisconfigurationException()
+    {
+        var response = CreateResponse(HttpStatusCode.Forbidden, null);
+
+        var exception = _client.GetErrorException(response);
+
+        Assert.IsInstanceOfType<PluginMisconfigurationException>(exception);
+        StringAssert.Contains(exception.Message, "HTTP 403 Forbidden");
+    }
+
+    [TestMethod]
     public void ConfigureErrorException_HandlesHtmlResponse()
     {
         var response = CreateResponse(
