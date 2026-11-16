@@ -1,5 +1,6 @@
 ﻿using Apps.Confluence.Constants;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Utils.Extensions.Sdk;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
 using RestSharp;
@@ -11,7 +12,15 @@ public class ApiRequest(string resource, Method method, IEnumerable<Authenticati
 {
     protected override void AddAuth(IEnumerable<AuthenticationCredentialsProvider> creds)
     {
-        var apiKey = creds.Get(CredNames.AccessToken).Value;
-        this.AddHeader("Authorization", $"Bearer {apiKey}");
+        string connectionType = creds.Get(CredNames.ConnectionType).Value;
+
+        string token = connectionType switch
+        {
+            ConnectionTypes.OAuth2 or ConnectionTypes.OAuth2CustomApp => creds.Get(CredNames.AccessToken).Value,
+            ConnectionTypes.ServiceAccountApiToken => creds.Get(CredNames.ServiceAccountApiToken).Value,
+            _ => throw new PluginMisconfigurationException($"This connection type is not supported: {connectionType}")
+        };
+
+        this.AddHeader("Authorization", $"Bearer {token}");
     }
 }

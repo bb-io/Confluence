@@ -18,5 +18,7 @@ public static class CredNames
 
     public const string CustomScopes = "customScopes";
 
+    public const string ServiceAccountApiToken = "serviceAccountApiToken";
+
     public const string ConnectionType = "connectionType";
 }

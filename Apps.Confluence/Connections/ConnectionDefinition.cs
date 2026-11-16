@@ -1,6 +1,7 @@
 ﻿using Apps.Confluence.Constants;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.Confluence.Connections;
 
@@ -28,27 +29,39 @@ public class ConnectionDefinition : IConnectionDefinition
                 new(CredNames.CustomScopes) { DisplayName = "Scopes" }
             ]
         },
+        new()
+        {
+            Name = ConnectionTypes.ServiceAccountApiToken,
+            DisplayName = "Service account API token",
+            AuthenticationType = ConnectionAuthenticationType.Undefined,
+            ConnectionProperties =
+            [
+                new(CredNames.ConfluenceId)
+                {
+                    DisplayName = "Cloud ID",
+                    Description = "Get it from https://<your-site>.atlassian.net/_edge/tenant_info"
+                },
+                new(CredNames.ServiceAccountApiToken) { DisplayName = "API token", Sensitive = true }
+            ]
+        }
     };
 
-    public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(
-        Dictionary<string, string> values)
+    public IEnumerable<AuthenticationCredentialsProvider> CreateAuthorizationCredentialsProviders(Dictionary<string, string> values)
     {
-        var token = values.First(v => v.Key == CredNames.AccessToken);
-        yield return new AuthenticationCredentialsProvider(CredNames.AccessToken, token.Value);
+        var connectionType = values[nameof(ConnectionPropertyGroup)];
+        if (!ConnectionTypes.SupportedConnectionTypes.Contains(connectionType))
+            throw new PluginMisconfigurationException($"Unknown connection type: {connectionType}");
             
-        var connectionType = values[nameof(ConnectionPropertyGroup)] switch
-        {
-            var ct when ConnectionTypes.SupportedConnectionTypes.Contains(ct) => ct,
-            _ => throw new Exception($"Unknown connection type: {values[nameof(ConnectionPropertyGroup)]}")
-        };
         yield return new AuthenticationCredentialsProvider(CredNames.ConnectionType, connectionType);
             
         var customKeys = new[]
         {
+            CredNames.AccessToken,
             CredNames.ConfluenceId,
             CredNames.ClientId, 
             CredNames.ClientSecret, 
-            CredNames.CustomScopes 
+            CredNames.CustomScopes,
+            CredNames.ServiceAccountApiToken
         };
 
         foreach (var key in customKeys)
